@@ -26,6 +26,9 @@
 
 #include <QClipboard>
 #include <QSysInfo>
+#ifdef WITH_XC_QRCODE
+#include "qrencode.h"
+#endif
 
 AboutDialog::AboutDialog(QWidget* parent)
     : QDialog(parent),
@@ -62,10 +65,18 @@ AboutDialog::AboutDialog(QWidget* parent)
     debugInfo.append(tr("Distribution: %1").arg(KEEPASSXC_DIST_TYPE).append("\n"));
 #endif
 
-    debugInfo.append("\n").append(QString("%1\n- Qt %2\n- %3\n\n")
+    debugInfo.append("\n").append(QString("%1\n- Qt %2\n- %3\n")
              .arg(tr("Libraries:"))
              .arg(QString::fromLocal8Bit(qVersion()))
              .arg(Crypto::backendVersion()));
+
+#ifdef WITH_XC_QRCODE
+    debugInfo.append("- libqrencode ")
+             .append(QRcode_APIVersionString())
+             .append("\n");
+#endif
+
+    debugInfo.append("\n");
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
     debugInfo.append(tr("Operating system: %1\nCPU architecture: %2\nKernel: %3 %4")
@@ -86,6 +97,9 @@ AboutDialog::AboutDialog(QWidget* parent)
 #endif
 #ifdef WITH_XC_YUBIKEY
     extensions += "\n- YubiKey";
+#endif
+#ifdef WITH_XC_QRCODE
+    extensions += "\n- QRCode";
 #endif
 
     if (extensions.isEmpty())
