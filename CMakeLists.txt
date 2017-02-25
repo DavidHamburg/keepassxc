@@ -43,6 +43,7 @@ option(WITH_APP_BUNDLE "Enable Application Bundle for OS X" ON)
 option(WITH_XC_AUTOTYPE "Include Auto-Type." ON)
 option(WITH_XC_HTTP "Include KeePassHTTP and Custom Icon Downloads." OFF)
 option(WITH_XC_YUBIKEY "Include YubiKey support." OFF)
+option(WITH_XC_QRCODE "Include QRCode support." ON)
 
 # Process ui files automatically from source files
 set(CMAKE_AUTOUIC ON)
@@ -257,6 +258,12 @@ if(WITH_XC_YUBIKEY)
   find_package(YubiKey REQUIRED)
 
   include_directories(SYSTEM ${YUBIKEY_INCLUDE_DIRS})
+endif()
+
+if(WITH_XC_QRCODE)
+  find_package(LibQREncode REQUIRED)
+
+  include_directories(SYSTEM ${QRENCODE_INCLUDE_DIRS})
 endif()
 
 if(UNIX)

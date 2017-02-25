@@ -169,6 +169,7 @@ set(keepassx_SOURCES_MAINEXE
 add_feature_info(AutoType WITH_XC_AUTOTYPE "Automatic password typing")
 add_feature_info(KeePassHTTP WITH_XC_HTTP "Browser integration compatible with ChromeIPass and PassIFox")
 add_feature_info(YubiKey WITH_XC_YUBIKEY "YubiKey HMAC-SHA1 challenge-response")
+add_feature_info(QRCode WITH_XC_QRCODE "Display passwords as QR code.")
 
 add_subdirectory(http)
 if(WITH_XC_HTTP)
@@ -225,6 +226,7 @@ target_link_libraries(keepassx_core
                       Qt5::Widgets
                       ${GCRYPT_LIBRARIES}
                       ${GPGERROR_LIBRARIES}
+                      ${QRENCODE_LIBRARY}
                       ${ZLIB_LIBRARIES})
 
 if(APPLE)
