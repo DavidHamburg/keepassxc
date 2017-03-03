@@ -141,6 +141,7 @@ public slots:
     void performAutoType();
     void openUrl();
     void openUrlForEntry(Entry* entry);
+    void showQRCode();
     void createGroup();
     void deleteGroup();
     void onGroupChanged(Group* group);
