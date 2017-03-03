@@ -241,6 +241,8 @@
     <addaction name="actionEntryClone"/>
     <addaction name="actionEntryDelete"/>
     <addaction name="actionEntryNew"/>
+    <addaction name="separator"/>
+    <addaction name="actionEntryQRCode"/>
    </widget>
    <widget class="QMenu" name="menuGroups">
     <property name="title">
@@ -556,6 +558,14 @@
    </property>
    <property name="visible">
     <bool>false</bool>
+   </property>
+  </action>
+  <action name="actionEntryQRCode">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>&amp;QR Code</string>
    </property>
   </action>
  </widget>
