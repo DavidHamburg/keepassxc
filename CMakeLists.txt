@@ -43,6 +43,7 @@ option(WITH_APP_BUNDLE "Enable Application Bundle for OS X" ON)
 option(WITH_XC_AUTOTYPE "Include Auto-Type." ON)
 option(WITH_XC_HTTP "Include KeePassHTTP and Custom Icon Downloads." OFF)
 option(WITH_XC_YUBIKEY "Include YubiKey support." OFF)
+option(WITH_XC_GPG "Include GPG support for unlocking databases." OFF)
 
 # Process ui files automatically from source files
 set(CMAKE_AUTOUIC ON)
@@ -283,6 +284,11 @@ endif()
 
 include_directories(SYSTEM ${GCRYPT_INCLUDE_DIR} ${ZLIB_INCLUDE_DIR})
 
+if(WITH_XC_GPG)
+  find_package(Gpgmepp CONFIG REQUIRED)
+  find_package(QGpgme CONFIG REQUIRED)
+endif()
+
 include(FeatureSummary)
 
 add_subdirectory(src)
@@ -296,6 +302,6 @@ if(PRINT_SUMMARY)
   feature_summary(WHAT ALL)
 else()
   # This will only print ENABLED and DISABLED feature
-  feature_summary(WHAT ENABLED_FEATURES DESCRIPTION "Enabled features:")
-  feature_summary(WHAT DISABLED_FEATURES DESCRIPTION "Disabled features:")
+  print_enabled_features()
+  print_disabled_features()
 endif()
