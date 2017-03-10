@@ -177,7 +177,18 @@ if(WITH_XC_HTTP)
 endif()
 
 if(WITH_XC_GPG)
-  set(gpg_LIB Gpgmepp QGpgme)
+  set(gpg_SOURCES
+      streams/gpgstream.cpp
+      streams/gpgstream.h
+  )
+
+
+  add_library(gpg STATIC ${gpg_SOURCES})
+  target_link_libraries(gpg Qt5::Core Qt5::Widgets Gpgmepp QGpgme)
+
+  set(gpg_LIB gpg)
+
+
 endif()
 
 add_subdirectory(autotype)

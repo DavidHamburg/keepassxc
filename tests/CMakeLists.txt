@@ -87,6 +87,7 @@ set(TEST_LIBRARIES
     keepassx_core
     ${keepasshttp_LIB}
     ${autotype_LIB}
+    ${gpg_LIB}
     Qt5::Core
     Qt5::Concurrent
     Qt5::Widgets
@@ -153,6 +154,11 @@ if(WITH_XC_AUTOTYPE)
   add_unit_test(NAME testautotype SOURCES TestAutoType.cpp
               LIBS ${TEST_LIBRARIES})
   set_target_properties(testautotype PROPERTIES ENABLE_EXPORTS ON)
+endif()
+
+if(WITH_XC_GPG)
+  add_unit_test(NAME testgpgstream SOURCES testgpgstream.cpp
+              LIBS ${TEST_LIBRARIES})
 endif()
 
 add_unit_test(NAME testentry SOURCES TestEntry.cpp

@@ -32,6 +32,7 @@
 #include "streams/QtIOCompressor"
 #include "streams/StoreDataStream.h"
 #include "streams/SymmetricCipherStream.h"
+#include "streams/gpgstream.h"
 
 KeePass2Reader::KeePass2Reader()
     : m_device(nullptr)
@@ -45,9 +46,15 @@ KeePass2Reader::KeePass2Reader()
 
 Database* KeePass2Reader::readDatabase(QIODevice* device, const CompositeKey& key, bool keepDatabase)
 {
+    GpgStream gpgStream(device);
+    if (!gpgStream.open(QIODevice::ReadOnly)) {
+        raiseError(gpgStream.errorString());
+        return nullptr;
+    }
+    m_device = &gpgStream;
+
     QScopedPointer<Database> db(new Database());
     m_db = db.data();
-    m_device = device;
     m_error = false;
     m_errorStr.clear();
     m_headerEnd = false;
