@@ -82,12 +82,11 @@ macro(add_unit_test)
   endif()
 endmacro(add_unit_test)
 
-
 set(TEST_LIBRARIES
     keepassx_core
+    ${GPGME_LIBRARIES}
     ${keepasshttp_LIB}
     ${autotype_LIB}
-    ${gpg_LIB}
     Qt5::Core
     Qt5::Concurrent
     Qt5::Widgets
@@ -158,7 +157,8 @@ endif()
 
 if(WITH_XC_GPG)
   add_unit_test(NAME testgpgstream SOURCES testgpgstream.cpp
-              LIBS ${TEST_LIBRARIES})
+              LIBS testsupport ${TEST_LIBRARIES})
+  set_target_properties(testgpgstream PROPERTIES ENABLE_EXPORTS ON)
 endif()
 
 add_unit_test(NAME testentry SOURCES TestEntry.cpp

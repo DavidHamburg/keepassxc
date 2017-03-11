@@ -15,8 +15,7 @@ public:
         ctx = GpgME::Context::createForProtocol(GpgME::OpenPGP);
         if (!ctx)
             qDebug("Failed to create the GpgME context for the OpenPGP protocol");
-        std::shared_ptr<QIODevice> p(baseDevice);
-        p_baseDevice = p;
+        p_baseDevice = baseDevice;
     }
 
     ~Private() {
@@ -27,7 +26,7 @@ public:
 
     GpgME::Context* ctx;
     GpgME::Data m_data;
-    std::shared_ptr<QIODevice> p_baseDevice;
+    QIODevice* p_baseDevice;
 
     std::vector< GpgME::Key > m_recipients;
 
@@ -80,7 +79,8 @@ bool GpgStream::open(QIODevice::OpenMode mode)
     }
 
     if (isReadable()) {
-        QGpgME::QIODeviceDataProvider dataProvider(d->p_baseDevice);
+        QGpgME::QByteArrayDataProvider dataProvider(d->p_baseDevice->readAll());
+        //QGpgME::QIODeviceDataProvider dataProvider(d->p_baseDevice);
         GpgME::Data dcipher(&dataProvider);
         d->m_lastError = d->ctx->decrypt(dcipher, d->m_data).error();
         if (d->m_lastError.encodedError()) {
@@ -95,7 +95,13 @@ bool GpgStream::open(QIODevice::OpenMode mode)
 
 bool GpgStream::reset()
 {
-    close();
+    if (isWritable() && m_hasUnwrittenData) {
+        flush();
+    }
+    if (isReadable()){
+        d->m_data.seek(0, SEEK_SET);
+    }
+
     return true;
 }
 
@@ -104,39 +110,47 @@ void GpgStream::close()
     if (!isOpen()) {
         return;
     }
-
-    if (!d->ctx)
-        return;
-
     if (isWritable()) {
-        d->m_data.seek(0, SEEK_SET);
+        flush();
+    }
 
+    d->m_recipients.clear();
+    LayeredStream::close();
+    QIODevice::close();
+    setOpenMode(NotOpen);
+}
+
+void GpgStream::flush()
+{
+    if (d->ctx){
+        d->m_data.seek(0, SEEK_SET);
         QGpgME::QByteArrayDataProvider dataProvider{};
         GpgME::Data dcipher(&dataProvider);
         d->m_lastError = d->ctx->encrypt(d->m_recipients, d->m_data, dcipher, GpgME::Context::AlwaysTrust).error();
-        if (d->m_lastError) {
+        if (!d->m_lastError) {
+            writeDataToBaseDevice(&dataProvider);
+            m_hasUnwrittenData = false;
+        }
+        else {
             if (d->m_lastError.encodedError()) {
                 setErrorString(QLatin1String("Failure while writing temporary file for file: '") + QLatin1String(d->m_lastError.asString()) + QLatin1String("'"));
             }
         }
-
-        qint64 totalBytesWritten = 0;
-        do {
-            const qint64 bytesWritten = m_baseDevice->write(dataProvider.data(), dataProvider.data().size());
-            if (bytesWritten == -1) {
-                //q->setErrorString(QT_TRANSLATE_NOOP("QtIOCompressor", "Error writing to underlying device: ") + device->errorString());
-                setErrorString("test");
-                return;
-            }
-            totalBytesWritten += bytesWritten;
-        } while (totalBytesWritten != dataProvider.data().size());
-
-        LayeredStream::close();
-        QIODevice::close();
     }
+}
 
-    d->m_recipients.clear();
-    //setOpenMode(NotOpen);
+void GpgStream::writeDataToBaseDevice(QGpgME::QByteArrayDataProvider *dataProvider)
+{
+    qint64 totalBytesWritten = 0;
+    do {
+        const qint64 bytesWritten = m_baseDevice->write(dataProvider->data(), dataProvider->data().size());
+        if (bytesWritten == -1) {
+            //q->setErrorString(QT_TRANSLATE_NOOP("QtIOCompressor", "Error writing to underlying device: ") + device->errorString());
+            setErrorString("test");
+            return;
+        }
+        totalBytesWritten += bytesWritten;
+    } while (totalBytesWritten != dataProvider->data().size());
 }
 
 qint64 GpgStream::readData(char* data, qint64 maxlen)
@@ -178,9 +192,10 @@ qint64 GpgStream::writeData(const char* data, qint64 maxlen)
         data = &data[len];
         maxlen -= len;
     }
+
+    m_hasUnwrittenData = true;
     return bytesWritten;
 }
-
 
 void GpgStream::keyList(QStringList& list, bool secretKeys, const QString& pattern)
 {

@@ -3,6 +3,7 @@
 
 #include "streams/LayeredStream.h"
 #include "gpgme++/context.h"
+#include "qgpgme/dataprovider.h"
 #include <QIODevice>
 
 class GpgStream : public LayeredStream
@@ -26,8 +27,11 @@ private:
     class Private;
     /// \internal d-pointer instance.
     Private* const d;
+    bool m_hasUnwrittenData;
     void init();
     void keyList(QStringList& list, bool secretKeys, const QString& pattern);
+    void flush();
+    void writeDataToBaseDevice(QGpgME::QByteArrayDataProvider *dataProvider);
 };
 
 #endif // GPGSTREAM_H
