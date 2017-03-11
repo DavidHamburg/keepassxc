@@ -177,18 +177,9 @@ if(WITH_XC_HTTP)
 endif()
 
 if(WITH_XC_GPG)
-  set(gpg_SOURCES
-      streams/gpgstream.cpp
-      streams/gpgstream.h
-  )
-
-
-  add_library(gpg STATIC ${gpg_SOURCES})
-  target_link_libraries(gpg Qt5::Core Qt5::Widgets Gpgmepp QGpgme)
-
-  set(gpg_LIB gpg)
-
-
+  set(keepassx_SOURCES ${keepassx_SOURCES} streams/gpgstream.cpp streams/gpgstream.h)
+  set(GPGME_LIBRARIES Gpgmepp QGpgme)
+  
 endif()
 
 add_subdirectory(autotype)
@@ -231,7 +222,7 @@ add_library(keepassx_core STATIC ${keepassx_SOURCES})
 
 set_target_properties(keepassx_core PROPERTIES COMPILE_DEFINITIONS KEEPASSX_BUILDING_CORE)
 target_link_libraries(keepassx_core
-                      ${gpg_LIB}
+                      ${GPGME_LIBRARIES}
                       ${keepasshttp_LIB}
                       ${autotype_LIB}
                       ${YUBIKEY_LIBRARIES}
