@@ -45,6 +45,7 @@ public:
 
 public slots:
     void pollYubikey();
+    void pollGpgKeys();
 
 signals:
     void editFinished(bool accepted);
@@ -62,6 +63,7 @@ private slots:
     void activatePassword();
     void activateKeyFile();
     void activateChallengeResponse();
+    void activateGpg();
     void browseKeyFile();
     void yubikeyDetected(int slot, bool blocking);
     void yubikeyDetectComplete();

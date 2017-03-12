@@ -30,6 +30,7 @@
 #include "keys/PasswordKey.h"
 #include "crypto/Random.h"
 #include "keys/YkChallengeResponseKey.h"
+#include "gpg/gpg.h"
 
 #include "config-keepassx.h"
 
@@ -77,6 +78,15 @@ DatabaseOpenWidget::DatabaseOpenWidget(QWidget* parent)
     m_ui->yubikeyProgress->setVisible(false);
 #endif
 
+#ifdef WITH_XC_GPG
+    connect(m_ui->buttonRefreshGpgKeys, SIGNAL(clicked()), SLOT(pollGpgKeys()));
+    connect(m_ui->comboGpg, SIGNAL(activated(int)), SLOT(activateGpg()));
+#else
+    m_ui->checkGpg->setVisible(false);
+    m_ui->buttonRefreshGpgKeys->setVisible(false);
+    m_ui->comboGpg->setVisible(false);
+#endif
+
 #ifdef Q_OS_MACOS
     // add random padding to layouts to align widgets properly
     m_ui->dialogButtonsLayout->setContentsMargins(10, 0, 15, 0);
@@ -100,6 +110,9 @@ void DatabaseOpenWidget::showEvent(QShowEvent* event)
     connect(YubiKey::instance(), SIGNAL(notFound()), SLOT(noYubikeyFound()), Qt::QueuedConnection);
 
     pollYubikey();
+#endif
+#ifdef WITH_XC_GPG
+    pollGpgKeys();
 #endif
 }
 
@@ -177,7 +190,20 @@ void DatabaseOpenWidget::openDatabase()
         delete m_db;
     }
     QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
+
+#ifdef WITH_XC_GPG
+    if (m_ui->checkGpg->isChecked()) {
+        int selectionIndex = m_ui->comboGpg->currentIndex();
+        QString encryptionKeyId = m_ui->comboGpg->itemData(selectionIndex).toString();
+        m_db = reader.readDatabase(&file, masterKey, encryptionKeyId, true);
+    }
+    else {
+        m_db = reader.readDatabase(&file, *masterKey);
+    }
+#else
     m_db = reader.readDatabase(&file, *masterKey);
+#endif
+
     QApplication::restoreOverrideCursor();
 
     if (m_db) {
@@ -268,6 +294,11 @@ void DatabaseOpenWidget::activateChallengeResponse()
     m_ui->checkChallengeResponse->setChecked(true);
 }
 
+void DatabaseOpenWidget::activateGpg()
+{
+    m_ui->checkGpg->setChecked(true);
+}
+
 void DatabaseOpenWidget::browseKeyFile()
 {
     QString filters = QString("%1 (*);;%2 (*.key)").arg(tr("All files"), tr("Key files"));
@@ -289,6 +320,31 @@ void DatabaseOpenWidget::pollYubikey()
 
     // YubiKey init is slow, detect asynchronously to not block the UI
     QtConcurrent::run(YubiKey::instance(), &YubiKey::detect);
+}
+
+void DatabaseOpenWidget::pollGpgKeys()
+{
+    m_ui->buttonRefreshGpgKeys->setEnabled(false);
+    m_ui->checkGpg->setEnabled(false);
+    m_ui->checkGpg->setChecked(false);
+    m_ui->comboGpg->setEnabled(false);
+    m_ui->comboGpg->clear();
+
+    Gpg gpg;
+    std::vector<GpgEncryptionKey> keys;
+    gpg.getAvailableSecretKeys(keys);
+
+    for (auto &element : keys){
+        m_ui->comboGpg->addItem(element.toString(), QVariant(element.getId()));
+    }
+
+    if (keys.size() > 0) {
+        m_ui->comboGpg->setEnabled(true);
+        m_ui->checkGpg->setEnabled(true);
+    }
+
+    m_ui->buttonRefreshGpgKeys->setEnabled(true);
+    //TODO DN remember last key
 }
 
 void DatabaseOpenWidget::yubikeyDetected(int slot, bool blocking)

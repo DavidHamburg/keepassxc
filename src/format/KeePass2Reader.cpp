@@ -33,6 +33,7 @@
 #include "streams/StoreDataStream.h"
 #include "streams/SymmetricCipherStream.h"
 #include "streams/gpgstream.h"
+#include "gpg/gpg.h"
 
 KeePass2Reader::KeePass2Reader()
     : m_device(nullptr)
@@ -44,15 +45,26 @@ KeePass2Reader::KeePass2Reader()
 {
 }
 
+Database* KeePass2Reader::readDatabase(QIODevice* device, const CompositeKey& key, const QString gpgEncryptionKeyId, bool keepDatabase)
+{
+    if (!gpgEncryptionKeyId.isEmpty()) {
+        Gpg gpg;
+        GpgEncryptionKey gpgKey = gpg.getKeyById(gpgEncryptionKeyId);
+        if (!gpgKey.isNull()) {
+            GpgStream gpgStream(device, gpgKey);
+            if (!gpgStream.open(QIODevice::ReadOnly)) {
+                raiseError(gpgStream.errorString());
+                return nullptr;
+            }
+            return readDatabase(&gpgStream, key, keepDatabase);
+        }
+    }
+
+    return readDatabase(device, key, keepDatabase);
+}
+
 Database* KeePass2Reader::readDatabase(QIODevice* device, const CompositeKey& key, bool keepDatabase)
 {
-    GpgStream gpgStream(device);
-    if (!gpgStream.open(QIODevice::ReadOnly)) {
-        raiseError(gpgStream.errorString());
-        return nullptr;
-    }
-    m_device = &gpgStream;
-
     QScopedPointer<Database> db(new Database());
     m_db = db.data();
     m_error = false;
@@ -64,6 +76,7 @@ Database* KeePass2Reader::readDatabase(QIODevice* device, const CompositeKey& ke
     m_encryptionIV.clear();
     m_streamStartBytes.clear();
     m_protectedStreamKey.clear();
+    m_device = device;
 
     StoreDataStream headerStream(m_device);
     headerStream.open(QIODevice::ReadOnly);
