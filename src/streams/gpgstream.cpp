@@ -27,18 +27,15 @@ public:
     GpgME::Context* ctx;
     GpgME::Data m_data;
     QIODevice* p_baseDevice;
-
-    std::vector< GpgME::Key > m_recipients;
-
-    // the result set of the last key list job
-    std::vector< GpgME::Key > m_keys;
+    GpgME::Key m_key;
 };
 
-GpgStream::GpgStream(QIODevice* baseDevice)
+GpgStream::GpgStream(QIODevice* baseDevice, GpgEncryptionKey& key)
     : LayeredStream(baseDevice),
-      d(new Private(baseDevice))
+      d(new Private(baseDevice)),
+      m_encryptionKey(key)
 {
-    init();
+    init(key);
 }
 
 GpgStream::~GpgStream()
@@ -46,28 +43,9 @@ GpgStream::~GpgStream()
     close();
 }
 
-void GpgStream::init()
+void GpgStream::init(GpgEncryptionKey& key)
 {
-    // skip a possible leading 0x in the id
-    QString cmp = "david.nerjes@mailbox.org";
-    if (cmp.startsWith(QLatin1String("0x")))
-        cmp = cmp.mid(2);
-
-    QStringList keylist;
-    keyList(keylist, false, cmp);
-
-    if (d->m_keys.size() > 0)
-        d->m_recipients.push_back(d->m_keys.front());
-
-    //TODO DN check rc and ctx
-    /*GpgME::initializeLibrary();
-    bool rc = (GpgME::checkEngine(GpgME::OpenPGP) == 0);
-
-    std::unique_ptr<GpgME::Context> ctx(GpgME::Context::createForProtocol(GpgME::OpenPGP));
-    if (!ctx){
-
-        //raiseError("Failed to create gpg context.");
-    }*/
+    loadKey(key);
 }
 
 bool GpgStream::open(QIODevice::OpenMode mode)
@@ -114,7 +92,6 @@ void GpgStream::close()
         flush();
     }
 
-    d->m_recipients.clear();
     LayeredStream::close();
     QIODevice::close();
     setOpenMode(NotOpen);
@@ -126,7 +103,11 @@ void GpgStream::flush()
         d->m_data.seek(0, SEEK_SET);
         QGpgME::QByteArrayDataProvider dataProvider{};
         GpgME::Data dcipher(&dataProvider);
-        d->m_lastError = d->ctx->encrypt(d->m_recipients, d->m_data, dcipher, GpgME::Context::AlwaysTrust).error();
+
+        auto keylist = std::vector<GpgME::Key>();
+        keyList(keylist, m_encryptionKey);
+
+        d->m_lastError = d->ctx->encrypt(keylist, d->m_data, dcipher, GpgME::Context::AlwaysTrust).error();
         if (!d->m_lastError) {
             writeDataToBaseDevice(&dataProvider);
             m_hasUnwrittenData = false;
@@ -138,6 +119,40 @@ void GpgStream::flush()
         }
     }
 }
+
+void GpgStream::keyList(std::vector<GpgME::Key>& list, GpgEncryptionKey& encKey)
+{
+    list.clear();
+    if (d->ctx && !d->ctx->startKeyListing("", true)) {
+        GpgME::Error error;
+        for (;;) {
+            GpgME::Key key;
+            key = d->ctx->nextKey(error);
+            if (error.encodedError() != GPG_ERR_NO_ERROR)
+                break;
+
+            std::vector<GpgME::UserID> userIDs = key.userIDs();
+            std::vector<GpgME::Subkey> subkeys = key.subkeys();
+            for (unsigned int i = 0; i < userIDs.size(); ++i) {
+                if (subkeys.size() > 0) {
+                    for (unsigned int j = 0; j < subkeys.size(); ++j) {
+                        const GpgME::Subkey& skey = subkeys[j];
+
+                        if (skey.keyID() == encKey.getSubKeyId()){
+                            list.push_back(key);
+                        }
+                    }
+                } else {
+                    if (key.keyID() == encKey.getKeyId()){
+                        list.push_back(key);
+                    }
+                }
+            }
+        }
+        d->ctx->endKeyListing();
+    }
+}
+
 
 void GpgStream::writeDataToBaseDevice(QGpgME::QByteArrayDataProvider *dataProvider)
 {
@@ -197,56 +212,12 @@ qint64 GpgStream::writeData(const char* data, qint64 maxlen)
     return bytesWritten;
 }
 
-void GpgStream::keyList(QStringList& list, bool secretKeys, const QString& pattern)
+void GpgStream::loadKey(GpgEncryptionKey& key)
 {
-    d->m_keys.clear();
-    list.clear();
-    if (d->ctx && !d->ctx->startKeyListing(pattern.toUtf8().constData(), secretKeys)) {
-        GpgME::Error error;
-        for (;;) {
-            GpgME::Key key;
-            key = d->ctx->nextKey(error);
-            if (error.encodedError() != GPG_ERR_NO_ERROR)
-                break;
-
-            bool needPushBack = true;
-
-            std::vector<GpgME::UserID> userIDs = key.userIDs();
-            std::vector<GpgME::Subkey> subkeys = key.subkeys();
-            for (unsigned int i = 0; i < userIDs.size(); ++i) {
-                if (subkeys.size() > 0) {
-                    for (unsigned int j = 0; j < subkeys.size(); ++j) {
-                        const GpgME::Subkey& skey = subkeys[j];
-
-                        if (((skey.canEncrypt() && !secretKeys) || (skey.isSecret() && secretKeys))
-
-                                &&  !(skey.isRevoked() || skey.isExpired() || skey.isInvalid()  || skey.isDisabled())) {
-                            QString entry = QString("%1:%2").arg(key.shortKeyID()).arg(userIDs[i].id());
-                            list += entry;
-                            if (needPushBack) {
-                                d->m_keys.push_back(key);
-                                needPushBack = false;
-                            }
-                        } else {
-                            // qDebug("Skip key '%s'", key.shortKeyID());
-                        }
-                    }
-                } else {
-                    // we have no subkey, so we operate on the main key
-                    if (((key.canEncrypt() && !secretKeys) || (key.hasSecret() && secretKeys))
-                            && !(key.isRevoked() || key.isExpired() || key.isInvalid()  || key.isDisabled())) {
-                        QString entry = QString("%1:%2").arg(key.shortKeyID()).arg(userIDs[i].id());
-                        list += entry;
-                        if (needPushBack) {
-                            d->m_keys.push_back(key);
-                            needPushBack = false;
-                        }
-                    } else {
-                        // qDebug("Skip key '%s'", key.shortKeyID());
-                    }
-                }
-            }
-        }
-        d->ctx->endKeyListing();
+    GpgME::Error error;
+    auto fingerprint = key.getKeyId().toLatin1().constData();
+    d->m_key = d->ctx->key(fingerprint, error, true);
+    if (error) {
+        //throw "invalid key";
     }
 }

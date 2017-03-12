@@ -4,6 +4,7 @@
 #include "streams/LayeredStream.h"
 #include "gpgme++/context.h"
 #include "qgpgme/dataprovider.h"
+#include "gpg/gpgencryptionkey.h"
 #include <QIODevice>
 
 class GpgStream : public LayeredStream
@@ -11,8 +12,7 @@ class GpgStream : public LayeredStream
     Q_OBJECT
 
 public:
-    explicit GpgStream(QIODevice* baseDevice);
-    //GpgStream(QIODevice* baseDevice, qint32 blockSize);
+    explicit GpgStream(QIODevice* baseDevice, GpgEncryptionKey& key);
     ~GpgStream();
     bool open(QIODevice::OpenMode mode) override;
     bool reset() override;
@@ -23,15 +23,15 @@ protected:
     qint64 writeData(const char* data, qint64 maxSize) override;
 
 private:
-    /// \internal d-pointer class.
     class Private;
-    /// \internal d-pointer instance.
     Private* const d;
     bool m_hasUnwrittenData;
-    void init();
-    void keyList(QStringList& list, bool secretKeys, const QString& pattern);
+    GpgEncryptionKey& m_encryptionKey;
+    void init(GpgEncryptionKey& key);
+    void loadKey(GpgEncryptionKey& key);
     void flush();
     void writeDataToBaseDevice(QGpgME::QByteArrayDataProvider *dataProvider);
+    void keyList(std::vector<GpgME::Key>& list, GpgEncryptionKey& encKey);
 };
 
 #endif // GPGSTREAM_H

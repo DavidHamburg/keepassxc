@@ -177,7 +177,7 @@ if(WITH_XC_HTTP)
 endif()
 
 if(WITH_XC_GPG)
-  set(keepassx_SOURCES ${keepassx_SOURCES} streams/gpgstream.cpp streams/gpgstream.h)
+  set(keepassx_SOURCES ${keepassx_SOURCES} streams/gpgstream.cpp streams/gpgstream.h gpg/gpg.cpp gpg/gpg.h  gpg/gpgencryptionkey.cpp gpg/gpgencryptionkey.h)
   set(GPGME_LIBRARIES Gpgmepp QGpgme)
   
 endif()

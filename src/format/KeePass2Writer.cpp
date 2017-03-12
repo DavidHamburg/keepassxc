@@ -31,6 +31,7 @@
 #include "streams/QtIOCompressor"
 #include "streams/SymmetricCipherStream.h"
 #include "streams/gpgstream.h"
+#include "gpg/gpg.h"
 
 #define CHECK_RETURN(x) if (!(x)) return;
 #define CHECK_RETURN_FALSE(x) if (!(x)) return false;
@@ -97,8 +98,11 @@ void KeePass2Writer::writeDatabase(QIODevice* device, Database* db)
 
     header.close();
 
+    Gpg gpg;
+    std::vector<GpgEncryptionKey> keys;
+    gpg.getAvailableSecretKeys(keys);
 
-    GpgStream gpgStream(device);
+    GpgStream gpgStream(device, keys.front());
     if (!gpgStream.open(QIODevice::WriteOnly)) {
         raiseError(gpgStream.errorString());
         return;
