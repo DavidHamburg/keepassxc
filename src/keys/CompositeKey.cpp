@@ -49,11 +49,12 @@ void CompositeKey::clear()
     qDeleteAll(m_keys);
     m_keys.clear();
     m_challengeResponseKeys.clear();
+    m_gpgEncryptionKeyId = QString();
 }
 
 bool CompositeKey::isEmpty() const
 {
-    return m_keys.isEmpty() && m_challengeResponseKeys.isEmpty();
+    return m_keys.isEmpty() && m_challengeResponseKeys.isEmpty() && m_gpgEncryptionKeyId.isNull();
 }
 
 CompositeKey* CompositeKey::clone() const
@@ -77,6 +78,7 @@ CompositeKey& CompositeKey::operator=(const CompositeKey& key)
         addChallengeResponseKey(subKey);
     }
 
+    addGpgEncryptionKey(key.m_gpgEncryptionKeyId);
     return *this;
 }
 
@@ -197,6 +199,11 @@ bool CompositeKey::challenge(const QByteArray& seed, QByteArray& result) const
     return true;
 }
 
+QString CompositeKey::gpgEncryptionKeyId() const
+{
+    return m_gpgEncryptionKeyId;
+}
+
 void CompositeKey::addKey(const Key& key)
 {
     m_keys.append(key.clone());
@@ -209,7 +216,7 @@ void CompositeKey::addChallengeResponseKey(QSharedPointer<ChallengeResponseKey> 
 
 void CompositeKey::addGpgEncryptionKey(QString encryptionKeyId)
 {
-    //TODO DN implement me
+    m_gpgEncryptionKeyId = encryptionKeyId;
 }
 
 int CompositeKey::transformKeyBenchmark(int msec)

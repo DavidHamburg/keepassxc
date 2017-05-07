@@ -33,7 +33,6 @@ class KeePass2Reader
 public:
     KeePass2Reader();
     Database* readDatabase(QIODevice* device, const CompositeKey& key, bool keepDatabase = false);
-    Database* readDatabase(QIODevice* device, const CompositeKey& key, const QString gpgEncryptionKeyId, bool keepDatabase = false);
     Database* readDatabase(const QString& filename, const CompositeKey& key);
     bool hasError();
     QString errorString();
@@ -42,6 +41,7 @@ public:
     QByteArray streamKey();
 
 private:
+    Database* readDatabaseForDevice(QIODevice* device, const CompositeKey& key, bool keepDatabase = false);
     void raiseError(const QString& errorMessage);
 
     bool readHeaderField();

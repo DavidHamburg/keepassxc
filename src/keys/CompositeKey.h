@@ -45,6 +45,8 @@ public:
     void addKey(const Key& key);
     void addChallengeResponseKey(QSharedPointer<ChallengeResponseKey> key);
     void addGpgEncryptionKey(QString encryptionKeyId);
+
+    QString gpgEncryptionKeyId() const;
     static int transformKeyBenchmark(int msec);
     static CompositeKey readFromLine(QString line);
 
@@ -54,6 +56,7 @@ private:
 
     QList<Key*> m_keys;
     QList<QSharedPointer<ChallengeResponseKey>> m_challengeResponseKeys;
+    QString m_gpgEncryptionKeyId;
 };
 
 #endif // KEEPASSX_COMPOSITEKEY_H

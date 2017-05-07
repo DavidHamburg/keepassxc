@@ -197,18 +197,7 @@ void DatabaseOpenWidget::openDatabase()
     }
     QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
 
-#ifdef WITH_XC_GPG
-    if (m_ui->checkGpg->isChecked()) {
-        int selectionIndex = m_ui->comboGpg->currentIndex();
-        QString encryptionKeyId = m_ui->comboGpg->itemData(selectionIndex).toString();
-        m_db = reader.readDatabase(&file, *masterKey, encryptionKeyId, true);
-    }
-    else {
-        m_db = reader.readDatabase(&file, *masterKey);
-    }
-#else
     m_db = reader.readDatabase(&file, *masterKey);
-#endif
 
     QApplication::restoreOverrideCursor();
 
@@ -274,6 +263,14 @@ QSharedPointer<CompositeKey> DatabaseOpenWidget::databaseKey()
         int slot = comboPayload >> 1;
         auto key = QSharedPointer<YkChallengeResponseKey>(new YkChallengeResponseKey(slot, blocking));
         masterKey->addChallengeResponseKey(key);
+    }
+#endif
+
+#ifdef WITH_XC_GPG
+    if (m_ui->checkGpg->isChecked()) {
+        int selectionIndex = m_ui->comboGpg->currentIndex();
+        QString encryptionKeyId = m_ui->comboGpg->itemData(selectionIndex).toString();
+        masterKey->addGpgEncryptionKey(encryptionKeyId);
     }
 #endif
 
