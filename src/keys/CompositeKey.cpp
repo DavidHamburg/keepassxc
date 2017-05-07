@@ -207,6 +207,10 @@ void CompositeKey::addChallengeResponseKey(QSharedPointer<ChallengeResponseKey> 
     m_challengeResponseKeys.append(key);
 }
 
+void CompositeKey::addGpgEncryptionKey(QString encryptionKeyId)
+{
+    //TODO DN implement me
+}
 
 int CompositeKey::transformKeyBenchmark(int msec)
 {

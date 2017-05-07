@@ -40,6 +40,9 @@ public:
     CompositeKey newMasterKey();
     QLabel* headlineLabel();
 
+protected:
+    void showEvent(QShowEvent* event) override;
+
 public slots:
     void setOkEnabled();
     void setCancelEnabled(bool enabled);
@@ -56,6 +59,9 @@ private slots:
     void noYubikeyFound();
     void challengeResponseGroupToggled(bool checked);
     void pollYubikey();
+
+    void gpgGroupToggled(bool checked);
+    void pollGpg();
 
 private:
     const QScopedPointer<Ui::ChangeMasterKeyWidget> m_ui;
