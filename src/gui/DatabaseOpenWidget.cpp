@@ -271,6 +271,14 @@ QSharedPointer<CompositeKey> DatabaseOpenWidget::databaseKey()
     }
 #endif
 
+#ifdef WITH_XC_GPG
+    if (m_ui->checkGpg->isChecked()) {
+        int selectionIndex = m_ui->comboGpg->currentIndex();
+        QString encryptionKeyId = m_ui->comboGpg->itemData(selectionIndex).toString();
+        masterKey.addGpgEncryptionKey(encryptionKeyId);
+    }
+#endif
+
     return masterKey;
 }
 

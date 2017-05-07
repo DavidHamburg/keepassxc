@@ -21,6 +21,7 @@
 #include <QFile>
 #include <QIODevice>
 
+#include "config-keepassx.h"
 #include "core/Database.h"
 #include "core/Endian.h"
 #include "crypto/CryptoHash.h"
@@ -45,25 +46,26 @@ KeePass2Reader::KeePass2Reader()
 {
 }
 
-Database* KeePass2Reader::readDatabase(QIODevice* device, const CompositeKey& key, const QString gpgEncryptionKeyId, bool keepDatabase)
+Database* KeePass2Reader::readDatabase(QIODevice* device, const CompositeKey& key, bool keepDatabase)
 {
-    if (!gpgEncryptionKeyId.isEmpty()) {
+#ifdef WITH_XC_GPG
+    if (!key.gpgEncryptionKeyId().isEmpty()) {
         Gpg gpg;
-        GpgEncryptionKey gpgKey = gpg.getKeyById(gpgEncryptionKeyId);
+        GpgEncryptionKey gpgKey = gpg.getKeyById(key.gpgEncryptionKeyId());
         if (!gpgKey.isNull()) {
             GpgStream gpgStream(device, gpgKey);
             if (!gpgStream.open(QIODevice::ReadOnly)) {
                 raiseError(gpgStream.errorString());
                 return nullptr;
             }
-            return readDatabase(&gpgStream, key, keepDatabase);
+            return readDatabaseForDevice(&gpgStream, key, keepDatabase);
         }
     }
-
-    return readDatabase(device, key, keepDatabase);
+#endif
+    return readDatabaseForDevice(device, key, keepDatabase);
 }
 
-Database* KeePass2Reader::readDatabase(QIODevice* device, const CompositeKey& key, bool keepDatabase)
+Database* KeePass2Reader::readDatabaseForDevice(QIODevice* device, const CompositeKey& key, bool keepDatabase)
 {
     QScopedPointer<Database> db(new Database());
     m_db = db.data();

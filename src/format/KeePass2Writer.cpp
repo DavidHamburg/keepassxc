@@ -21,6 +21,7 @@
 #include <QFile>
 #include <QIODevice>
 
+#include "config-keepassx.h"
 #include "core/Database.h"
 #include "core/Endian.h"
 #include "crypto/CryptoHash.h"
@@ -98,6 +99,7 @@ void KeePass2Writer::writeDatabase(QIODevice* device, Database* db)
 
     header.close();
 
+#ifdef WITH_XC_GPG
     Gpg gpg;
     std::vector<GpgEncryptionKey> keys;
     gpg.getAvailableSecretKeys(keys);
@@ -107,8 +109,11 @@ void KeePass2Writer::writeDatabase(QIODevice* device, Database* db)
         raiseError(gpgStream.errorString());
         return;
     }
-
     m_device = &gpgStream;
+#else
+    m_device = device;
+#endif
+
     QByteArray headerHash = CryptoHash::hash(header.data(), CryptoHash::Sha256);
     CHECK_RETURN(writeData(header.data()));
 
@@ -166,10 +171,12 @@ void KeePass2Writer::writeDatabase(QIODevice* device, Database* db)
         return;
     }
 
+#ifdef WITH_XC_GPG
     if (!gpgStream.reset()) {
         raiseError(gpgStream.errorString());
         return;
     }
+#endif
 
     if (xmlWriter.hasError()) {
         raiseError(xmlWriter.errorString());
