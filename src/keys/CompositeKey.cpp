@@ -78,7 +78,7 @@ CompositeKey& CompositeKey::operator=(const CompositeKey& key)
         addChallengeResponseKey(subKey);
     }
 
-    addGpgEncryptionKey(key.m_gpgEncryptionKeyId);
+    setGpgEncryptionKey(key.m_gpgEncryptionKeyId);
     return *this;
 }
 
@@ -214,7 +214,7 @@ void CompositeKey::addChallengeResponseKey(QSharedPointer<ChallengeResponseKey> 
     m_challengeResponseKeys.append(key);
 }
 
-void CompositeKey::addGpgEncryptionKey(QString encryptionKeyId)
+void CompositeKey::setGpgEncryptionKey(QString encryptionKeyId)
 {
     m_gpgEncryptionKeyId = encryptionKeyId;
 }

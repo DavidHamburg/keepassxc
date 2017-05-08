@@ -44,7 +44,7 @@ public:
 
     void addKey(const Key& key);
     void addChallengeResponseKey(QSharedPointer<ChallengeResponseKey> key);
-    void addGpgEncryptionKey(QString encryptionKeyId);
+    void setGpgEncryptionKey(QString encryptionKeyId);
 
     QString gpgEncryptionKeyId() const;
     static int transformKeyBenchmark(int msec);
