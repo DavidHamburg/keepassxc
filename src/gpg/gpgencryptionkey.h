@@ -15,27 +15,27 @@ public:
         return m_keyId.isEmpty();
     }
 
-    const QString toString();
-    const QString getId() {
+    QString toString() const;
+    QString getId() const  {
         if (IsSubKey()) {
             return m_keyId + m_subKeyId;
         }
         return m_keyId;
     }
-    const QString getShortKeyId() { return m_shortKeyId; }
-    const QString getKeyId() { return m_keyId; }
-    const QString getFingerprint() { return m_fingerprint; }
-    const QString getUserId() { return m_userId; }
-    const QString getSubKeyId() { return m_subKeyId; }
-    bool IsSubKey() { return m_isSubKey; }
+    QString getShortKeyId() const { return m_shortKeyId; }
+    QString getKeyId() const { return m_keyId; }
+    QString getFingerprint() const { return m_fingerprint; }
+    QString getUserId() const { return m_userId; }
+    QString getSubKeyId() const { return m_subKeyId; }
+    bool IsSubKey() const { return m_isSubKey; }
 
 private:
+    QString m_fingerprint;
     QString m_shortKeyId;
     QString m_keyId;
     QString m_userId;
-    QString m_subKeyId;
-    QString m_fingerprint;
     bool m_isSubKey;
+    QString m_subKeyId;
 };
 
 #endif // GPGENCRYPTIONKEY_H

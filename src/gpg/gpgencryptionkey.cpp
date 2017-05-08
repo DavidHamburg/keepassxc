@@ -1,23 +1,30 @@
 #include "gpgencryptionkey.h"
-GpgEncryptionKey::GpgEncryptionKey() { }
+
+GpgEncryptionKey::GpgEncryptionKey()
+    : m_fingerprint(QString()),
+      m_shortKeyId(QString()),
+      m_keyId(QString()),
+      m_userId(QString()),
+      m_isSubKey(false)
+{
+}
 
 GpgEncryptionKey::GpgEncryptionKey(const char* fingerprint, const char* shortKeyId, const char* keyId, const char* userId, const char* subKeyId)
+    : m_fingerprint(QString(fingerprint)),
+      m_shortKeyId(QString(shortKeyId)),
+      m_keyId(QString(keyId)),
+      m_userId(QString(userId)),
+      m_isSubKey(subKeyId)
 {
-    m_fingerprint = QString(fingerprint);
-    m_shortKeyId = QString(shortKeyId);
-    m_keyId = QString(keyId);
-    m_userId = QString(userId);
     if (subKeyId) {
-        m_isSubKey = true;
         m_subKeyId = QString(subKeyId);
     }
     else {
-        m_isSubKey = false;
         m_subKeyId = QString();
     }
 }
 
-const QString GpgEncryptionKey::toString()
+QString GpgEncryptionKey::toString() const
 {
     if (m_isSubKey){
         return QString("%1:%2 (subkey:%3)")

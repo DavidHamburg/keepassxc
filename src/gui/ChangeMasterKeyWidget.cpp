@@ -210,7 +210,7 @@ void ChangeMasterKeyWidget::generateKey()
         }
 
         QString encryptionKeyId = m_ui->comboGpg->itemData(selectionIndex).toString();
-        m_key.addGpgEncryptionKey(encryptionKeyId);
+        m_key.setGpgEncryptionKey(encryptionKeyId);
     }
 #endif
 
