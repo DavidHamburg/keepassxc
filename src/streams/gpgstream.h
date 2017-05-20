@@ -1,10 +1,10 @@
 #ifndef GPGSTREAM_H
 #define GPGSTREAM_H
 
-#include "streams/LayeredStream.h"
+#include "gpg/gpgencryptionkey.h"
 #include "gpgme++/context.h"
 #include "qgpgme/dataprovider.h"
-#include "gpg/gpgencryptionkey.h"
+#include "streams/LayeredStream.h"
 #include <QIODevice>
 
 class GpgStream : public LayeredStream
@@ -30,7 +30,7 @@ private:
     void init();
     void loadKey();
     void flush();
-    void writeDataToBaseDevice(QGpgME::QByteArrayDataProvider *dataProvider);
+    void writeDataToBaseDevice(QGpgME::QByteArrayDataProvider* dataProvider);
     void keyList(std::vector<GpgME::Key>& list);
 };
 

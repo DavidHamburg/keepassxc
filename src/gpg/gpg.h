@@ -1,8 +1,8 @@
 #ifndef GPG_H
 #define GPG_H
 
-#include <QStringList>
 #include "gpg/gpgencryptionkey.h"
+#include <QStringList>
 #include <vector>
 
 class Gpg

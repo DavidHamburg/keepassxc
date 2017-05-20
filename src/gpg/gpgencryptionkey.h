@@ -8,7 +8,11 @@ class GpgEncryptionKey
 {
 public:
     GpgEncryptionKey();
-    GpgEncryptionKey(const char* fingerprint, const char* shortKeyId, const char* keyId, const char* userId, const char* subKeyId = nullptr);
+    GpgEncryptionKey(const char* fingerprint,
+                     const char* shortKeyId,
+                     const char* keyId,
+                     const char* userId,
+                     const char* subKeyId = nullptr);
 
     bool isNull() const
     {
@@ -16,18 +20,37 @@ public:
     }
 
     QString toString() const;
-    QString getId() const  {
+    QString getId() const
+    {
         if (IsSubKey()) {
             return m_keyId + m_subKeyId;
         }
         return m_keyId;
     }
-    QString getShortKeyId() const { return m_shortKeyId; }
-    QString getKeyId() const { return m_keyId; }
-    QString getFingerprint() const { return m_fingerprint; }
-    QString getUserId() const { return m_userId; }
-    QString getSubKeyId() const { return m_subKeyId; }
-    bool IsSubKey() const { return m_isSubKey; }
+    QString getShortKeyId() const
+    {
+        return m_shortKeyId;
+    }
+    QString getKeyId() const
+    {
+        return m_keyId;
+    }
+    QString getFingerprint() const
+    {
+        return m_fingerprint;
+    }
+    QString getUserId() const
+    {
+        return m_userId;
+    }
+    QString getSubKeyId() const
+    {
+        return m_subKeyId;
+    }
+    bool IsSubKey() const
+    {
+        return m_isSubKey;
+    }
 
 private:
     QString m_fingerprint;
