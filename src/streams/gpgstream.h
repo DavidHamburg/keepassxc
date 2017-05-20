@@ -12,7 +12,7 @@ class GpgStream : public LayeredStream
     Q_OBJECT
 
 public:
-    explicit GpgStream(QIODevice* baseDevice, GpgEncryptionKey& key);
+    explicit GpgStream(QIODevice* baseDevice, GpgEncryptionKey key);
     ~GpgStream();
     bool open(QIODevice::OpenMode mode) override;
     bool reset() override;
@@ -26,12 +26,12 @@ private:
     class Private;
     Private* const d;
     bool m_hasUnwrittenData;
-    GpgEncryptionKey& m_encryptionKey;
-    void init(GpgEncryptionKey& key);
-    void loadKey(GpgEncryptionKey& key);
+    GpgEncryptionKey m_encryptionKey;
+    void init();
+    void loadKey();
     void flush();
     void writeDataToBaseDevice(QGpgME::QByteArrayDataProvider *dataProvider);
-    void keyList(std::vector<GpgME::Key>& list, GpgEncryptionKey& encKey);
+    void keyList(std::vector<GpgME::Key>& list);
 };
 
 #endif // GPGSTREAM_H

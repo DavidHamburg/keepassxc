@@ -30,12 +30,12 @@ public:
     GpgME::Key m_key;
 };
 
-GpgStream::GpgStream(QIODevice* baseDevice, GpgEncryptionKey& key)
+GpgStream::GpgStream(QIODevice* baseDevice, GpgEncryptionKey key)
     : LayeredStream(baseDevice),
       d(new Private(baseDevice)),
       m_encryptionKey(key)
 {
-    init(key);
+    init();
 }
 
 GpgStream::~GpgStream()
@@ -43,9 +43,9 @@ GpgStream::~GpgStream()
     close();
 }
 
-void GpgStream::init(GpgEncryptionKey& key)
+void GpgStream::init()
 {
-    loadKey(key);
+    loadKey();
 }
 
 bool GpgStream::open(QIODevice::OpenMode mode)
@@ -105,7 +105,8 @@ void GpgStream::flush()
         GpgME::Data dcipher(&dataProvider);
 
         auto keylist = std::vector<GpgME::Key>();
-        keyList(keylist, m_encryptionKey);
+        //TODO DN on init:
+        keyList(keylist);
 
         d->m_lastError = d->ctx->encrypt(keylist, d->m_data, dcipher, GpgME::Context::AlwaysTrust).error();
         if (!d->m_lastError) {
@@ -120,7 +121,7 @@ void GpgStream::flush()
     }
 }
 
-void GpgStream::keyList(std::vector<GpgME::Key>& list, GpgEncryptionKey& encKey)
+void GpgStream::keyList(std::vector<GpgME::Key>& list)
 {
     list.clear();
     if (d->ctx && !d->ctx->startKeyListing("", true)) {
@@ -138,12 +139,12 @@ void GpgStream::keyList(std::vector<GpgME::Key>& list, GpgEncryptionKey& encKey)
                     for (unsigned int j = 0; j < subkeys.size(); ++j) {
                         const GpgME::Subkey& skey = subkeys[j];
 
-                        if (skey.keyID() == encKey.getSubKeyId()){
+                        if (skey.keyID() == m_encryptionKey.getSubKeyId()){
                             list.push_back(key);
                         }
                     }
                 } else {
-                    if (key.keyID() == encKey.getKeyId()){
+                    if (key.keyID() == m_encryptionKey.getKeyId()){
                         list.push_back(key);
                     }
                 }
@@ -212,10 +213,10 @@ qint64 GpgStream::writeData(const char* data, qint64 maxlen)
     return bytesWritten;
 }
 
-void GpgStream::loadKey(GpgEncryptionKey& key)
+void GpgStream::loadKey()
 {
     GpgME::Error error;
-    auto fingerprint = key.getKeyId().toLatin1().constData();
+    auto fingerprint = m_encryptionKey.getKeyId().toLatin1().constData();
     d->m_key = d->ctx->key(fingerprint, error, true);
     if (error) {
         //throw "invalid key";

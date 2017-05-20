@@ -32,7 +32,7 @@
 #include "streams/QtIOCompressor"
 #include "streams/SymmetricCipherStream.h"
 #include "streams/gpgstream.h"
-#include "gpg/gpg.h"
+#include "gpg/gpgstreamwriter.h"
 
 #define CHECK_RETURN(x) if (!(x)) return;
 #define CHECK_RETURN_FALSE(x) if (!(x)) return false;
@@ -99,19 +99,13 @@ void KeePass2Writer::writeDatabase(QIODevice* device, Database* db)
 
     header.close();
 
-#ifdef WITH_XC_GPG
-    Gpg gpg;
-    std::vector<GpgEncryptionKey> keys;
-    gpg.getAvailableSecretKeys(keys);
-
-    GpgStream gpgStream(device, keys.front());
-    if (!gpgStream.open(QIODevice::WriteOnly)) {
-        raiseError(gpgStream.errorString());
-        return;
-    }
-    m_device = &gpgStream;
-#else
     m_device = device;
+#ifdef WITH_XC_GPG
+    GpgStreamWriter gpgStreamWriter{device, db};
+    if (gpgStreamWriter.hasEncryptionKey())
+    {
+        m_device = gpgStreamWriter.getGpgStream();
+    }
 #endif
 
     QByteArray headerHash = CryptoHash::hash(header.data(), CryptoHash::Sha256);
@@ -172,9 +166,11 @@ void KeePass2Writer::writeDatabase(QIODevice* device, Database* db)
     }
 
 #ifdef WITH_XC_GPG
-    if (!gpgStream.reset()) {
-        raiseError(gpgStream.errorString());
-        return;
+    if (gpgStreamWriter.isEncrypted()) {
+        if (!gpgStreamWriter.resetStream()){
+            raiseError(gpgStreamWriter.getLastError());
+            return;
+        }
     }
 #endif
 
