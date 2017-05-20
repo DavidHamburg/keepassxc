@@ -1,9 +1,9 @@
 #ifndef GPGSTREAMWRITER_H
 #define GPGSTREAMWRITER_H
 
-#include <QIODevice>
 #include "core/Database.h"
 #include "streams/gpgstream.h"
+#include <QIODevice>
 
 class GpgStreamWriter
 {

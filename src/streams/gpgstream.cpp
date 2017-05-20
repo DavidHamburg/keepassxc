@@ -1,16 +1,17 @@
 #include "gpgstream.h"
 #include <gpgme++/context.h>
-#include <gpgme++/encryptionresult.h>
-#include <gpgme++/decryptionresult.h>
-#include <gpgme++/keylistresult.h>
-#include <gpgme++/key.h>
 #include <gpgme++/data.h>
+#include <gpgme++/decryptionresult.h>
+#include <gpgme++/encryptionresult.h>
+#include <gpgme++/key.h>
+#include <gpgme++/keylistresult.h>
 #include <qgpgme/dataprovider.h>
 
 class GpgStream::Private
 {
 public:
-    Private(QIODevice* baseDevice) {
+    Private(QIODevice* baseDevice)
+    {
         GpgME::initializeLibrary();
         ctx = GpgME::Context::createForProtocol(GpgME::OpenPGP);
         if (!ctx)
@@ -18,7 +19,8 @@ public:
         p_baseDevice = baseDevice;
     }
 
-    ~Private() {
+    ~Private()
+    {
         delete ctx;
     }
 
@@ -31,9 +33,9 @@ public:
 };
 
 GpgStream::GpgStream(QIODevice* baseDevice, GpgEncryptionKey key)
-    : LayeredStream(baseDevice),
-      d(new Private(baseDevice)),
-      m_encryptionKey(key)
+    : LayeredStream(baseDevice)
+    , d(new Private(baseDevice))
+    , m_encryptionKey(key)
 {
     init();
 }
@@ -58,7 +60,7 @@ bool GpgStream::open(QIODevice::OpenMode mode)
 
     if (isReadable()) {
         QGpgME::QByteArrayDataProvider dataProvider(d->p_baseDevice->readAll());
-        //QGpgME::QIODeviceDataProvider dataProvider(d->p_baseDevice);
+        // QGpgME::QIODeviceDataProvider dataProvider(d->p_baseDevice);
         GpgME::Data dcipher(&dataProvider);
         d->m_lastError = d->ctx->decrypt(dcipher, d->m_data).error();
         if (d->m_lastError.encodedError()) {
@@ -76,7 +78,7 @@ bool GpgStream::reset()
     if (isWritable() && m_hasUnwrittenData) {
         flush();
     }
-    if (isReadable()){
+    if (isReadable()) {
         d->m_data.seek(0, SEEK_SET);
     }
 
@@ -99,23 +101,23 @@ void GpgStream::close()
 
 void GpgStream::flush()
 {
-    if (d->ctx){
+    if (d->ctx) {
         d->m_data.seek(0, SEEK_SET);
         QGpgME::QByteArrayDataProvider dataProvider{};
         GpgME::Data dcipher(&dataProvider);
 
         auto keylist = std::vector<GpgME::Key>();
-        //TODO DN on init:
+        // TODO DN on init:
         keyList(keylist);
 
         d->m_lastError = d->ctx->encrypt(keylist, d->m_data, dcipher, GpgME::Context::AlwaysTrust).error();
         if (!d->m_lastError) {
             writeDataToBaseDevice(&dataProvider);
             m_hasUnwrittenData = false;
-        }
-        else {
+        } else {
             if (d->m_lastError.encodedError()) {
-                setErrorString(QLatin1String("Failure while writing temporary file for file: '") + QLatin1String(d->m_lastError.asString()) + QLatin1String("'"));
+                setErrorString(QLatin1String("Failure while writing temporary file for file: '") +
+                               QLatin1String(d->m_lastError.asString()) + QLatin1String("'"));
             }
         }
     }
@@ -139,12 +141,12 @@ void GpgStream::keyList(std::vector<GpgME::Key>& list)
                     for (unsigned int j = 0; j < subkeys.size(); ++j) {
                         const GpgME::Subkey& skey = subkeys[j];
 
-                        if (skey.keyID() == m_encryptionKey.getSubKeyId()){
+                        if (skey.keyID() == m_encryptionKey.getSubKeyId()) {
                             list.push_back(key);
                         }
                     }
                 } else {
-                    if (key.keyID() == m_encryptionKey.getKeyId()){
+                    if (key.keyID() == m_encryptionKey.getKeyId()) {
                         list.push_back(key);
                     }
                 }
@@ -154,14 +156,14 @@ void GpgStream::keyList(std::vector<GpgME::Key>& list)
     }
 }
 
-
-void GpgStream::writeDataToBaseDevice(QGpgME::QByteArrayDataProvider *dataProvider)
+void GpgStream::writeDataToBaseDevice(QGpgME::QByteArrayDataProvider* dataProvider)
 {
     qint64 totalBytesWritten = 0;
     do {
         const qint64 bytesWritten = m_baseDevice->write(dataProvider->data(), dataProvider->data().size());
         if (bytesWritten == -1) {
-            //q->setErrorString(QT_TRANSLATE_NOOP("QtIOCompressor", "Error writing to underlying device: ") + device->errorString());
+            // q->setErrorString(QT_TRANSLATE_NOOP("QtIOCompressor", "Error writing to underlying device: ") +
+            // device->errorString());
             setErrorString("test");
             return;
         }
@@ -219,6 +221,6 @@ void GpgStream::loadKey()
     auto fingerprint = m_encryptionKey.getKeyId().toLatin1().constData();
     d->m_key = d->ctx->key(fingerprint, error, true);
     if (error) {
-        //throw "invalid key";
+        // throw "invalid key";
     }
 }
