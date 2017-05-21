@@ -166,7 +166,7 @@ void KeePass2Writer::writeDatabase(QIODevice* device, Database* db)
     }
 
 #ifdef WITH_XC_GPG
-    if (gpgStreamWriter.isEncrypted()) {
+    if (gpgStreamWriter.hasEncryptedStream()) {
         if (!gpgStreamWriter.resetStream()){
             raiseError(gpgStreamWriter.getLastError());
             return;

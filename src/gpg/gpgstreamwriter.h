@@ -14,7 +14,7 @@ public:
     GpgStreamWriter& operator=(const GpgStreamWriter& that) = delete;
     bool hasEncryptionKey();
     QIODevice* getGpgStream();
-    bool isEncrypted();
+    bool hasEncryptedStream();
     bool resetStream();
     QString getLastError();
 

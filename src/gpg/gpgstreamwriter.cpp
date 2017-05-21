@@ -32,7 +32,7 @@ QIODevice* GpgStreamWriter::getGpgStream()
     return m_stream;
 }
 
-bool GpgStreamWriter::isEncrypted()
+bool GpgStreamWriter::hasEncryptedStream()
 {
     return m_stream != nullptr;
 }
