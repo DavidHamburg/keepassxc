@@ -1,19 +1,29 @@
 #include "testgpgstream.h"
-#include <QTest>
 #include "FailDevice.h"
 #include "streams/gpgstream.h"
+#include <QTest>
 
 QTEST_GUILESS_MAIN(TestGpgStream)
 
-void TestGpgStream::testOpenReadable()
+void TestGpgStream::initTestCase()
 {
     Gpg gpg;
     std::vector<GpgEncryptionKey> keys;
     gpg.getAvailableSecretKeys(keys);
-    m_key = keys.front();
 
+    if (keys.size() == 0) {
+        QSKIP("No gpg key available. Skipping tests", SkipAll);
+    } else {
+        m_key = keys.front();
+    }
+}
+
+void TestGpgStream::testOpenReadable()
+{
     auto data = createTestData();
-    GpgStream sut(data.get(), m_key);
+    QBuffer buffer(&data);
+    buffer.open(QIODevice::ReadWrite);
+    GpgStream sut(&buffer, m_key);
     sut.open(QIODevice::ReadOnly);
 
     QVERIFY(sut.isReadable());
@@ -23,7 +33,9 @@ void TestGpgStream::testOpenReadable()
 void TestGpgStream::testOpenWritable()
 {
     auto data = createTestData();
-    GpgStream sut(data.get(), m_key);
+    QBuffer buffer(&data);
+    buffer.open(QIODevice::ReadWrite);
+    GpgStream sut(&buffer, m_key);
     sut.open(QIODevice::WriteOnly);
 
     QVERIFY(!sut.isReadable());
@@ -33,7 +45,9 @@ void TestGpgStream::testOpenWritable()
 void TestGpgStream::testCloseIsNotWritableOrReadable()
 {
     auto data = createTestData();
-    GpgStream sut(data.get(), m_key);
+    QBuffer buffer(&data);
+    buffer.open(QIODevice::ReadWrite);
+    GpgStream sut(&buffer, m_key);
     sut.open(QIODevice::ReadWrite);
     sut.close();
 
@@ -44,7 +58,9 @@ void TestGpgStream::testCloseIsNotWritableOrReadable()
 void TestGpgStream::testReset()
 {
     auto data = createTestData();
-    GpgStream sut(data.get(), m_key);
+    QBuffer buffer(&data);
+    buffer.open(QIODevice::ReadWrite);
+    GpgStream sut(&buffer, m_key);
     sut.open(QIODevice::ReadWrite);
     auto expected = sut.readAll();
     sut.reset();
@@ -53,10 +69,10 @@ void TestGpgStream::testReset()
     QCOMPARE(actual.length(), expected.length());
 }
 
-std::shared_ptr<QBuffer> TestGpgStream::createTestData()
+QByteArray TestGpgStream::createTestData()
 {
-    QByteArray *data = new QByteArray();
-    QBuffer buffer(data);
+    QByteArray data{};
+    QBuffer buffer(&data);
     buffer.open(QIODevice::ReadWrite);
     GpgStream stream(&buffer, m_key);
     stream.open(QIODevice::WriteOnly);
@@ -66,7 +82,5 @@ std::shared_ptr<QBuffer> TestGpgStream::createTestData()
     stream.close();
     buffer.close();
 
-    auto result = std::shared_ptr<QBuffer>(new QBuffer(data));
-    result->open(QIODevice::ReadWrite);
-    return result;
+    return data;
 }

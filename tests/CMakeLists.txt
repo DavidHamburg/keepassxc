@@ -157,11 +157,15 @@ endif()
 
 if(WITH_XC_GPG)
   add_unit_test(NAME testgpgstream SOURCES testgpgstream.cpp
-              LIBS testsupport ${TEST_LIBRARIES})
+              LIBS ${TEST_LIBRARIES})
   add_unit_test(NAME testgpg SOURCES testgpg.cpp
-              LIBS testsupport ${TEST_LIBRARIES})
+              LIBS ${TEST_LIBRARIES})
+  add_unit_test(NAME testgpgstreamwriter SOURCES testgpgstreamwriter.cpp
+              LIBS ${TEST_LIBRARIES})
 
   set_target_properties(testgpgstream PROPERTIES ENABLE_EXPORTS ON)
+  set_target_properties(testgpg PROPERTIES ENABLE_EXPORTS ON)
+  set_target_properties(testgpgstreamwriter PROPERTIES ENABLE_EXPORTS ON)
 endif()
 
 add_unit_test(NAME testentry SOURCES TestEntry.cpp

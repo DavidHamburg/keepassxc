@@ -1,25 +1,25 @@
 #ifndef TESTGPGSTREAM_H
 #define TESTGPGSTREAM_H
 
-#include <memory>
+#include "gpg/gpg.h"
+#include "gpg/gpgencryptionkey.h"
 #include <QBuffer>
 #include <QObject>
-#include "gpg/gpgencryptionkey.h"
-#include "gpg/gpg.h"
+#include <memory>
 
 class TestGpgStream : public QObject
 {
     Q_OBJECT
 
 private slots:
-    //void initTestCase();
-    //void cleanupTestCase();
+    void initTestCase();
     void testOpenReadable();
     void testOpenWritable();
     void testCloseIsNotWritableOrReadable();
     void testReset();
+
 private:
-    std::shared_ptr<QBuffer> createTestData();
+    QByteArray createTestData();
     GpgEncryptionKey m_key;
 };
 
