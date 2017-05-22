@@ -31,7 +31,6 @@ private:
     void loadKey();
     void flush();
     void writeDataToBaseDevice(QGpgME::QByteArrayDataProvider* dataProvider);
-    void keyList(std::vector<GpgME::Key>& list);
 };
 
 #endif // GPGSTREAM_H
