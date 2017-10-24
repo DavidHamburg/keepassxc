@@ -33,7 +33,7 @@ include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 include(CheckCXXSourceCompiles)
 
-option(WITH_TESTS "Enable building of unit tests" ON)
+option(WITH_TESTS "Enable building of unit tests" OFF)
 option(WITH_GUI_TESTS "Enable building of GUI tests" OFF)
 option(WITH_DEV_BUILD "Use only for development. Disables/warns about deprecated methods." OFF)
 option(WITH_ASAN "Enable address sanitizer checks (Linux only)" OFF)
@@ -42,8 +42,8 @@ option(WITH_APP_BUNDLE "Enable Application Bundle for OS X" ON)
 
 option(WITH_XC_AUTOTYPE "Include Auto-Type." ON)
 option(WITH_XC_HTTP "Include KeePassHTTP and Custom Icon Downloads." OFF)
-option(WITH_XC_YUBIKEY "Include YubiKey support." OFF)
-option(WITH_XC_GPG "Include GPG support for unlocking databases." OFF)
+option(WITH_XC_YUBIKEY "Include YubiKey support." ON)
+option(WITH_XC_GPG "Include GPG support for unlocking databases." ON)
 
 # Process ui files automatically from source files
 set(CMAKE_AUTOUIC ON)
