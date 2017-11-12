@@ -55,6 +55,7 @@
 #include "gui/entry/EntryView.h"
 #include "gui/group/EditGroupWidget.h"
 #include "gui/group/GroupView.h"
+#include "qrcode/qrcodedialog.h"
 
 DatabaseWidget::DatabaseWidget(Database* db, QWidget* parent)
     : QStackedWidget(parent)
@@ -603,6 +604,19 @@ void DatabaseWidget::openUrlForEntry(Entry* entry)
         QUrl url = QUrl::fromUserInput(urlString);
         QDesktopServices::openUrl(url);
     }
+}
+
+void DatabaseWidget::showQRCode()
+{
+    Entry* currentEntry = m_entryView->currentEntry();
+    if (!currentEntry) {
+        Q_ASSERT(false);
+        return;
+    }
+
+    QRCodeDialog qrCodeDialog(this, currentEntry->password());
+    qrCodeDialog.setModal(true);
+    qrCodeDialog.exec();
 }
 
 void DatabaseWidget::createGroup()
