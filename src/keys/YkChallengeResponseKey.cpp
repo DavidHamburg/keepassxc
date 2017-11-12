@@ -1,5 +1,6 @@
 /*
 *  Copyright (C) 2014 Kyle Manna <kyle@kylemanna.com>
+*  Copyright (C) 2017 KeePassXC Team <team@keepassxc.org>
 *
 *  This program is free software: you can redistribute it and/or modify
 *  it under the terms of the GNU General Public License as published by
@@ -49,7 +50,7 @@ QByteArray YkChallengeResponseKey::rawKey() const
  */
 bool YkChallengeResponseKey::challenge(const QByteArray& challenge)
 {
-    return this->challenge(challenge, 1);
+    return this->challenge(challenge, 2);
 }
 
 bool YkChallengeResponseKey::challenge(const QByteArray& challenge, unsigned retries)
@@ -69,8 +70,8 @@ bool YkChallengeResponseKey::challenge(const QByteArray& challenge, unsigned ret
 
         QEventLoop loop;
         QFutureWatcher<YubiKey::ChallengeResult> watcher;
-        watcher.setFuture(future);
         connect(&watcher, SIGNAL(finished()), &loop, SLOT(quit()));
+        watcher.setFuture(future);
         loop.exec();
 
         if (m_blocking) {

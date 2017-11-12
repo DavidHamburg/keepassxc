@@ -1,5 +1,6 @@
 /*
  *  Copyright (C) 2010 Felix Geyer <debfx@fobos.de>
+ *  Copyright (C) 2017 KeePassXC Team <team@keepassxc.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -485,7 +486,6 @@ QList<Entry*> Group::entriesRecursive(bool includeHistoryItems) const
 
 Entry* Group::findEntry(QString entryId)
 {
-    Q_ASSERT(!entryId.isEmpty());
     Q_ASSERT(!entryId.isNull());
 
     if (Uuid::isUuid(entryId)) {
@@ -526,12 +526,11 @@ Entry* Group::findEntryByUuid(const Uuid& uuid)
 Entry* Group::findEntryByPath(QString entryPath, QString basePath)
 {
 
-    Q_ASSERT(!entryPath.isEmpty());
     Q_ASSERT(!entryPath.isNull());
 
     for (Entry* entry : asConst(m_entries)) {
         QString currentEntryPath = basePath + entry->title();
-        if (entryPath == currentEntryPath) {
+        if (entryPath == currentEntryPath || entryPath == QString("/" + currentEntryPath)) {
             return entry;
         }
     }
@@ -544,6 +543,39 @@ Entry* Group::findEntryByPath(QString entryPath, QString basePath)
     }
 
     return nullptr;
+}
+
+Group* Group::findGroupByPath(QString groupPath, QString basePath)
+{
+
+    Q_ASSERT(!groupPath.isNull());
+
+    QStringList possiblePaths;
+    possiblePaths << groupPath;
+    if (!groupPath.startsWith("/")) {
+        possiblePaths << QString("/" + groupPath);
+    }
+    if (!groupPath.endsWith("/")) {
+        possiblePaths << QString(groupPath + "/");
+    }
+    if (!groupPath.endsWith("/") && !groupPath.endsWith("/")) {
+        possiblePaths << QString("/" + groupPath + "/");
+    }
+
+    if (possiblePaths.contains(basePath)) {
+        return this;
+    }
+
+    for (Group* innerGroup : children()) {
+        QString innerBasePath = basePath + innerGroup->name() + "/";
+        Group* group = innerGroup->findGroupByPath(groupPath, innerBasePath);
+        if (group != nullptr) {
+            return group;
+        }
+    }
+
+    return nullptr;
+
 }
 
 QString Group::print(bool printUuids, QString baseName, int depth)
@@ -635,7 +667,7 @@ void Group::merge(const Group* other)
     for (Entry* entry : dbEntries) {
         // entries are searched by uuid
         if (!findEntryByUuid(entry->uuid())) {
-            entry->clone(Entry::CloneNoFlags)->setGroup(this);
+            entry->clone(Entry::CloneIncludeHistory)->setGroup(this);
         } else {
             resolveConflict(findEntryByUuid(entry->uuid()), entry);
         }
@@ -859,11 +891,11 @@ void Group::resolveConflict(Entry* existingEntry, Entry* otherEntry)
         case KeepBoth:
             // if one entry is newer, create a clone and add it to the group
             if (timeExisting > timeOther) {
-                clonedEntry = otherEntry->clone(Entry::CloneNoFlags);
+                clonedEntry = otherEntry->clone(Entry::CloneIncludeHistory);
                 clonedEntry->setGroup(this);
                 markOlderEntry(clonedEntry);
             } else if (timeExisting < timeOther) {
-                clonedEntry = otherEntry->clone(Entry::CloneNoFlags);
+                clonedEntry = otherEntry->clone(Entry::CloneIncludeHistory);
                 clonedEntry->setGroup(this);
                 markOlderEntry(existingEntry);
             }
@@ -872,7 +904,8 @@ void Group::resolveConflict(Entry* existingEntry, Entry* otherEntry)
             if (timeExisting < timeOther) {
                 // only if other entry is newer, replace existing one
                 removeEntry(existingEntry);
-                addEntry(otherEntry->clone(Entry::CloneNoFlags));
+                clonedEntry = otherEntry->clone(Entry::CloneIncludeHistory);
+                clonedEntry->setGroup(this);
             }
 
             break;

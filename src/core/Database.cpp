@@ -1,5 +1,6 @@
 /*
  *  Copyright (C) 2010 Felix Geyer <debfx@fobos.de>
+ *  Copyright (C) 2017 KeePassXC Team <team@keepassxc.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,14 +19,18 @@
 #include "Database.h"
 
 #include <QFile>
+#include <QSaveFile>
+#include <QTextStream>
 #include <QTimer>
 #include <QXmlStreamReader>
 
+#include "cli/PasswordInput.h"
 #include "core/Group.h"
 #include "core/Metadata.h"
 #include "crypto/Random.h"
 #include "format/KeePass2.h"
 #include "format/KeePass2Reader.h"
+#include "format/KeePass2Writer.h"
 
 QHash<Uuid, Database*> Database::m_uuidMap;
 
@@ -220,14 +225,12 @@ bool Database::setTransformRounds(quint64 rounds)
     return true;
 }
 
-bool Database::setKey(const CompositeKey& key, const QByteArray& transformSeed,
-                      bool updateChangedTime)
+bool Database::setKey(const CompositeKey& key, const QByteArray& transformSeed, bool updateChangedTime)
 {
     bool ok;
     QString errorString;
 
-    QByteArray transformedMasterKey =
-            key.transform(transformSeed, transformRounds(), &ok, &errorString);
+    QByteArray transformedMasterKey = key.transform(transformSeed, transformRounds(), &ok, &errorString);
     if (!ok) {
         return false;
     }
@@ -252,6 +255,25 @@ bool Database::setKey(const CompositeKey& key)
 bool Database::hasKey() const
 {
     return m_data.hasKey;
+}
+
+bool Database::transformKeyWithSeed(const QByteArray& transformSeed)
+{
+    Q_ASSERT(hasKey());
+
+    bool ok;
+    QString errorString;
+
+    QByteArray transformedMasterKey =
+            m_data.key.transform(transformSeed, transformRounds(), &ok, &errorString);
+    if (!ok) {
+        return false;
+    }
+
+    m_data.transformSeed = transformSeed;
+    m_data.transformedMasterKey = transformedMasterKey;
+
+    return true;
 }
 
 bool Database::verifyKey(const CompositeKey& key) const
@@ -289,23 +311,21 @@ void Database::recycleEntry(Entry* entry)
             createRecycleBin();
         }
         entry->setGroup(metadata()->recycleBin());
-    }
-    else {
+    } else {
         delete entry;
     }
 }
 
 void Database::recycleGroup(Group* group)
 {
-     if (m_metadata->recycleBinEnabled()) {
+    if (m_metadata->recycleBinEnabled()) {
         if (!m_metadata->recycleBin()) {
             createRecycleBin();
         }
         group->setParent(metadata()->recycleBin());
-    }
-    else {
+    } else {
         delete group;
-     }
+    }
 }
 
 void Database::emptyRecycleBin()
@@ -327,6 +347,15 @@ void Database::emptyRecycleBin()
 void Database::merge(const Database* other)
 {
     m_rootGroup->merge(other->rootGroup());
+
+    for (Uuid customIconId : other->metadata()->customIcons().keys()) {
+        QImage customIcon = other->metadata()->customIcon(customIconId);
+        if (!this->metadata()->containsCustomIcon(customIconId)) {
+            qDebug("Adding custom icon %s to database.", qPrintable(customIconId.toHex()));
+            this->metadata()->addCustomIcon(customIconId, customIcon);
+        }
+    }
+
     emit modified();
 }
 
@@ -394,5 +423,40 @@ Database* Database::openDatabaseFile(QString fileName, CompositeKey key)
     }
 
     return db;
+}
 
+Database* Database::unlockFromStdin(QString databaseFilename)
+{
+    QTextStream outputTextStream(stdout);
+
+    outputTextStream << QString("Insert password to unlock " + databaseFilename + "\n> ");
+    outputTextStream.flush();
+
+    QString line = PasswordInput::getPassword();
+    CompositeKey key = CompositeKey::readFromLine(line);
+    return Database::openDatabaseFile(databaseFilename, key);
+}
+
+QString Database::saveToFile(QString filePath)
+{
+    KeePass2Writer writer;
+    QSaveFile saveFile(filePath);
+    if (saveFile.open(QIODevice::WriteOnly)) {
+
+        // write the database to the file
+        writer.writeDatabase(&saveFile, this);
+
+        if (writer.hasError()) {
+            return writer.errorString();
+        }
+
+        if (saveFile.commit()) {
+            // successfully saved database file
+            return QString();
+        } else {
+            return saveFile.errorString();
+        }
+    } else {
+        return saveFile.errorString();
+    }
 }

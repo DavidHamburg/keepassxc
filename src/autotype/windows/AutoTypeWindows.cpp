@@ -1,5 +1,6 @@
 /*
  *  Copyright (C) 2016 Lennart Glauer <mail@lennart-glauer.de>
+ *  Copyright (C) 2017 KeePassXC Team <team@keepassxc.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -521,14 +522,12 @@ void AutoTypeExecutorWin::execChar(AutoTypeChar* action)
 {
     m_platform->sendChar(action->character, true);
     m_platform->sendChar(action->character, false);
-    ::Sleep(25);
 }
 
 void AutoTypeExecutorWin::execKey(AutoTypeKey* action)
 {
     m_platform->sendKey(action->key, true);
     m_platform->sendKey(action->key, false);
-    ::Sleep(25);
 }
 
 void AutoTypeExecutorWin::execClearField(AutoTypeClearField* action = nullptr)

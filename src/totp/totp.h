@@ -1,5 +1,6 @@
 /*
  *  Copyright (C) 2017 Weslly Honorato <﻿weslly@protonmail.com>
+ *  Copyright (C) 2017 KeePassXC Team <team@keepassxc.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,12 +21,21 @@
 
 #include <QtCore/qglobal.h>
 
+class QUrl;
+
 class QTotp
 {
 public:
     QTotp();
-    static QString parseOtpString(QString rawSecret, quint8 &digits, quint8 &step);
+    static QString parseOtpString(QString rawSecret, quint8& digits, quint8& step);
     static QString generateTotp(const QByteArray key, quint64 time, const quint8 numDigits, const quint8 step);
+    static QUrl generateOtpString(const QString& secret,
+                                  const QString& type,
+                                  const QString& issuer,
+                                  const QString& username,
+                                  const QString& algorithm,
+                                  const quint8& digits,
+                                  const quint8& step);
     static const quint8 defaultStep;
     static const quint8 defaultDigits;
 };

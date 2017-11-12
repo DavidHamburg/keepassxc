@@ -1,5 +1,6 @@
 /*
  *  Copyright (C) 2011 Felix Geyer <debfx@fobos.de>
+ *  Copyright (C) 2017 KeePassXC Team <team@keepassxc.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -38,18 +39,21 @@ public:
     explicit DatabaseOpenWidget(QWidget* parent = nullptr);
     ~DatabaseOpenWidget();
     void load(const QString& filename);
+    void clearForms();
     void enterKey(const QString& pw, const QString& keyFile);
     Database* database();
 
 public slots:
     void pollYubikey();
+    void pollGpgKeys();
 
 signals:
     void editFinished(bool accepted);
 
 protected:
     void showEvent(QShowEvent* event) override;
-    CompositeKey databaseKey();
+    void hideEvent(QHideEvent* event) override;
+    QSharedPointer<CompositeKey> databaseKey();
 
 protected slots:
     virtual void openDatabase();
@@ -59,8 +63,10 @@ private slots:
     void activatePassword();
     void activateKeyFile();
     void activateChallengeResponse();
+    void activateGpg();
     void browseKeyFile();
     void yubikeyDetected(int slot, bool blocking);
+    void yubikeyDetectComplete();
     void noYubikeyFound();
 
 protected:

@@ -1,5 +1,6 @@
 /*
  *  Copyright (C) 2012 Felix Geyer <debfx@fobos.de>
+ *  Copyright (C) 2017 KeePassXC Team <team@keepassxc.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -28,6 +29,7 @@
 #include "MainWindow.h"
 
 #include "config-keepassx.h"
+#include "gpg/gpg.h"
 
 #include <QtConcurrentRun>
 #include <QSharedPointer>
@@ -69,10 +71,26 @@ ChangeMasterKeyWidget::ChangeMasterKeyWidget(QWidget* parent)
 #else
     m_ui->challengeResponseGroup->setVisible(false);
 #endif
+
+#ifdef WITH_XC_GPG
+    connect(m_ui->gpgGroup, SIGNAL(clicked(bool)), SLOT(gpgGroupToggled(bool)));
+    connect(m_ui->gpgGroup, SIGNAL(clicked(bool)), SLOT(setOkEnabled()));
+    connect(m_ui->buttonSearchGpgKeys, SIGNAL(clicked()), SLOT(pollGpg()));
+#else
+    m_ui->gpgGroup->setVisible(false);
+#endif
 }
 
 ChangeMasterKeyWidget::~ChangeMasterKeyWidget()
 {
+}
+
+void ChangeMasterKeyWidget::showEvent(QShowEvent* event)
+{
+    DialogyWidget::showEvent(event);
+#ifdef WITH_XC_GPG
+    pollGpg();
+#endif
 }
 
 void ChangeMasterKeyWidget::createKeyFile()
@@ -183,6 +201,19 @@ void ChangeMasterKeyWidget::generateKey()
     }
 #endif
 
+#ifdef WITH_XC_GPG
+    if (m_ui->gpgGroup->isChecked()) {
+        int selectionIndex = m_ui->comboGpg->currentIndex();
+        if (selectionIndex < 0) {
+            m_ui->messageWidget->showMessage(tr("Changing master key failed: no gpg key selected."), MessageWidget::Error);
+            return;
+        }
+
+        QString encryptionKeyId = m_ui->comboGpg->itemData(selectionIndex).toString();
+        m_key.setGpgEncryptionKey(encryptionKeyId);
+    }
+#endif
+
     m_ui->messageWidget->hideMessage();
     emit editFinished(true);
 }
@@ -191,6 +222,12 @@ void ChangeMasterKeyWidget::generateKey()
 void ChangeMasterKeyWidget::reject()
 {
     emit editFinished(false);
+}
+
+void ChangeMasterKeyWidget::gpgGroupToggled(bool checked)
+{
+    if (checked)
+        pollGpg();
 }
 
 void ChangeMasterKeyWidget::challengeResponseGroupToggled(bool checked)
@@ -209,6 +246,29 @@ void ChangeMasterKeyWidget::pollYubikey()
 
     // YubiKey init is slow, detect asynchronously to not block the UI
     QtConcurrent::run(YubiKey::instance(), &YubiKey::detect);
+}
+
+void ChangeMasterKeyWidget::pollGpg()
+{
+    m_ui->buttonSearchGpgKeys->setEnabled(false);
+    m_ui->comboGpg->setEnabled(false);
+    m_ui->comboGpg->clear();
+
+    Gpg gpg;
+    std::vector<GpgEncryptionKey> keys;
+    gpg.getAvailableSecretKeys(keys);
+
+    for (auto &element : keys){
+        m_ui->comboGpg->addItem(element.toString(), QVariant(element.getId()));
+    }
+
+    if (keys.size() > 0) {
+        m_ui->comboGpg->setEnabled(true);
+        m_ui->gpgGroup->setEnabled(true);
+        m_ui->buttonSearchGpgKeys->setEnabled(true);
+    }
+
+    setOkEnabled();
 }
 
 void ChangeMasterKeyWidget::yubikeyDetected(int slot, bool blocking)

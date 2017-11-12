@@ -21,6 +21,7 @@
 #include <QCoreApplication>
 
 #include "keys/CompositeKey.h"
+#include "gpg/gpgencryptionkey.h"
 
 class Database;
 class QIODevice;
@@ -40,6 +41,7 @@ public:
     QByteArray streamKey();
 
 private:
+    Database* readDatabaseForDevice(QIODevice* device, const CompositeKey& key, bool keepDatabase = false);
     void raiseError(const QString& errorMessage);
 
     bool readHeaderField();

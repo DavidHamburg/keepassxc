@@ -1,5 +1,6 @@
 /*
  *  Copyright (C) 2012 Felix Geyer <debfx@fobos.de>
+ *  Copyright (C) 2017 KeePassXC Team <team@keepassxc.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -36,7 +37,7 @@ AboutDialog::AboutDialog(QWidget* parent)
     setWindowFlags(Qt::Sheet);
     setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
-    m_ui->nameLabel->setText(m_ui->nameLabel->text() + " " + KEEPASSX_VERSION);
+    m_ui->nameLabel->setText(m_ui->nameLabel->text().replace("${VERSION}", KEEPASSX_VERSION));
     QFont nameLabelFont = m_ui->nameLabel->font();
     nameLabelFont.setPointSize(nameLabelFont.pointSize() + 4);
     m_ui->nameLabel->setFont(nameLabelFont);
@@ -54,10 +55,14 @@ AboutDialog::AboutDialog(QWidget* parent)
     QString debugInfo = "KeePassXC - ";
     debugInfo.append(tr("Version %1\n").arg(KEEPASSX_VERSION));
     if (!commitHash.isEmpty()) {
-        debugInfo.append(tr("Revision: %1").arg(commitHash).append("\n\n"));
+        debugInfo.append(tr("Revision: %1").arg(commitHash.left(7)).append("\n"));
     }
 
-    debugInfo.append(QString("%1\n- Qt %2\n- %3\n\n")
+#ifdef KEEPASSXC_DIST
+    debugInfo.append(tr("Distribution: %1").arg(KEEPASSXC_DIST_TYPE).append("\n"));
+#endif
+
+    debugInfo.append("\n").append(QString("%1\n- Qt %2\n- %3\n\n")
              .arg(tr("Libraries:"))
              .arg(QString::fromLocal8Bit(qVersion()))
              .arg(Crypto::backendVersion()));

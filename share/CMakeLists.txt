@@ -1,4 +1,5 @@
 #  Copyright (C) 2011 Felix Geyer <debfx@fobos.de>
+#  Copyright (C) 2017 KeePassXC Team <team@keepassxc.org>
 #
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -29,7 +30,8 @@ if(UNIX AND NOT APPLE)
     install(DIRECTORY icons/application/ DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor
             FILES_MATCHING PATTERN "application-x-keepassxc.png" PATTERN "application-x-keepassxc.svgz"
             PATTERN "status" EXCLUDE PATTERN "actions" EXCLUDE PATTERN "categories" EXCLUDE)
-    install(FILES linux/keepassxc.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+    install(FILES linux/org.keepassxc.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+    install(FILES linux/org.keepassxc.appdata.xml DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo)
     install(FILES linux/keepassxc.xml DESTINATION ${CMAKE_INSTALL_DATADIR}/mime/packages)
 endif(UNIX AND NOT APPLE)
 

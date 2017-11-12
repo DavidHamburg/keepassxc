@@ -1,5 +1,6 @@
 /*
  *  Copyright (C) 2010 Felix Geyer <debfx@fobos.de>
+ *  Copyright (C) 2017 KeePassXC Team <team@keepassxc.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -77,6 +78,7 @@ public:
     const AutoTypeAssociations* autoTypeAssociations() const;
     QString title() const;
     QString url() const;
+    QString webUrl() const;
     QString username() const;
     QString password() const;
     QString notes() const;
@@ -140,8 +142,10 @@ public:
      */
     Entry* clone(CloneFlags flags) const;
     void copyDataFrom(const Entry* other);
+    QString maskPasswordPlaceholders(const QString& str) const;
     QString resolveMultiplePlaceholders(const QString& str) const;
     QString resolvePlaceholder(const QString& str) const;
+    QString resolveUrl(const QString& url) const;
 
     /**
      * Call before and after set*() methods to create a history item

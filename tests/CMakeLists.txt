@@ -82,9 +82,9 @@ macro(add_unit_test)
   endif()
 endmacro(add_unit_test)
 
-
 set(TEST_LIBRARIES
     keepassx_core
+    ${GPGME_LIBRARIES}
     ${keepasshttp_LIB}
     ${autotype_LIB}
     Qt5::Core
@@ -98,7 +98,7 @@ set(TEST_LIBRARIES
 
 set(testsupport_SOURCES modeltest.cpp FailDevice.cpp)
 add_library(testsupport STATIC ${testsupport_SOURCES})
-target_link_libraries(testsupport ${MHD_LIBRARIES} Qt5::Core Qt5::Concurrent Qt5::Widgets Qt5::Test)
+target_link_libraries(testsupport Qt5::Core Qt5::Concurrent Qt5::Widgets Qt5::Test)
 
 if(YUBIKEY_FOUND)
   set(TEST_LIBRARIES ${TEST_LIBRARIES} ${YUBIKEY_LIBRARIES})
@@ -155,10 +155,26 @@ if(WITH_XC_AUTOTYPE)
   set_target_properties(testautotype PROPERTIES ENABLE_EXPORTS ON)
 endif()
 
+if(WITH_XC_GPG)
+  add_unit_test(NAME testgpgstream SOURCES testgpgstream.cpp
+              LIBS ${TEST_LIBRARIES})
+  add_unit_test(NAME testgpg SOURCES testgpg.cpp
+              LIBS ${TEST_LIBRARIES})
+  add_unit_test(NAME testgpgstreamwriter SOURCES testgpgstreamwriter.cpp
+              LIBS ${TEST_LIBRARIES})
+
+  set_target_properties(testgpgstream PROPERTIES ENABLE_EXPORTS ON)
+  set_target_properties(testgpg PROPERTIES ENABLE_EXPORTS ON)
+  set_target_properties(testgpgstreamwriter PROPERTIES ENABLE_EXPORTS ON)
+endif()
+
 add_unit_test(NAME testentry SOURCES TestEntry.cpp
               LIBS ${TEST_LIBRARIES})
 
 add_unit_test(NAME testtotp SOURCES TestTotp.cpp
+              LIBS ${TEST_LIBRARIES})
+
+add_unit_test(NAME testbase32 SOURCES TestBase32.cpp
               LIBS ${TEST_LIBRARIES})
 
 add_unit_test(NAME testcsvparser SOURCES TestCsvParser.cpp

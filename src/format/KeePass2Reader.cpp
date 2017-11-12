@@ -21,6 +21,7 @@
 #include <QFile>
 #include <QIODevice>
 
+#include "config-keepassx.h"
 #include "core/Database.h"
 #include "core/Endian.h"
 #include "crypto/CryptoHash.h"
@@ -32,6 +33,8 @@
 #include "streams/QtIOCompressor"
 #include "streams/StoreDataStream.h"
 #include "streams/SymmetricCipherStream.h"
+#include "streams/gpgstream.h"
+#include "gpg/gpg.h"
 
 KeePass2Reader::KeePass2Reader()
     : m_device(nullptr)
@@ -45,9 +48,27 @@ KeePass2Reader::KeePass2Reader()
 
 Database* KeePass2Reader::readDatabase(QIODevice* device, const CompositeKey& key, bool keepDatabase)
 {
+#ifdef WITH_XC_GPG
+    if (!key.gpgEncryptionKeyId().isEmpty()) {
+        Gpg gpg;
+        GpgEncryptionKey gpgKey = gpg.getKeyById(key.gpgEncryptionKeyId());
+        if (!gpgKey.isNull()) {
+            GpgStream gpgStream(device, gpgKey);
+            if (!gpgStream.open(QIODevice::ReadOnly)) {
+                raiseError(gpgStream.errorString());
+                return nullptr;
+            }
+            return readDatabaseForDevice(&gpgStream, key, keepDatabase);
+        }
+    }
+#endif
+    return readDatabaseForDevice(device, key, keepDatabase);
+}
+
+Database* KeePass2Reader::readDatabaseForDevice(QIODevice* device, const CompositeKey& key, bool keepDatabase)
+{
     QScopedPointer<Database> db(new Database());
     m_db = db.data();
-    m_device = device;
     m_error = false;
     m_errorStr.clear();
     m_headerEnd = false;
@@ -57,6 +78,7 @@ Database* KeePass2Reader::readDatabase(QIODevice* device, const CompositeKey& ke
     m_encryptionIV.clear();
     m_streamStartBytes.clear();
     m_protectedStreamKey.clear();
+    m_device = device;
 
     StoreDataStream headerStream(m_device);
     headerStream.open(QIODevice::ReadOnly);
@@ -73,7 +95,7 @@ Database* KeePass2Reader::readDatabase(QIODevice* device, const CompositeKey& ke
     quint32 signature2 = Endian::readUInt32(m_headerStream, KeePass2::BYTEORDER, &ok);
     if (ok && signature2 == KeePass1::SIGNATURE_2) {
         raiseError(tr("The selected file is an old KeePass 1 database (.kdb).\n\n"
-                      "You can import it by clicking on Database > 'Import KeePass 1 database'.\n"
+                      "You can import it by clicking on Database > 'Import KeePass 1 database...'.\n"
                       "This is a one-way migration. You won't be able to open the imported "
                       "database with the old KeePassX 0.4 version."));
         return nullptr;
@@ -198,7 +220,7 @@ Database* KeePass2Reader::readDatabase(QIODevice* device, const CompositeKey& ke
         QByteArray headerHash = CryptoHash::hash(headerStream.storedData(), CryptoHash::Sha256);
         if (headerHash != xmlReader.headerHash()) {
             raiseError("Header doesn't match hash");
-            return Q_NULLPTR;
+            return nullptr;
         }
     }
 

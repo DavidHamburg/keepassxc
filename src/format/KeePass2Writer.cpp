@@ -21,6 +21,7 @@
 #include <QFile>
 #include <QIODevice>
 
+#include "config-keepassx.h"
 #include "core/Database.h"
 #include "core/Endian.h"
 #include "crypto/CryptoHash.h"
@@ -30,6 +31,8 @@
 #include "streams/HashedBlockStream.h"
 #include "streams/QtIOCompressor"
 #include "streams/SymmetricCipherStream.h"
+#include "streams/gpgstream.h"
+#include "gpg/gpgstreamwriter.h"
 
 #define CHECK_RETURN(x) if (!(x)) return;
 #define CHECK_RETURN_FALSE(x) if (!(x)) return false;
@@ -45,6 +48,7 @@ void KeePass2Writer::writeDatabase(QIODevice* device, Database* db)
     m_error = false;
     m_errorStr.clear();
 
+    QByteArray transformSeed = randomGen()->randomArray(32);
     QByteArray masterSeed = randomGen()->randomArray(32);
     QByteArray encryptionIV = randomGen()->randomArray(16);
     QByteArray protectedStreamKey = randomGen()->randomArray(32);
@@ -52,7 +56,12 @@ void KeePass2Writer::writeDatabase(QIODevice* device, Database* db)
     QByteArray endOfHeader = "\r\n\r\n";
 
     if (db->challengeMasterSeed(masterSeed) == false) {
-        raiseError("Unable to issue challenge-response.");
+        raiseError(tr("Unable to issue challenge-response."));
+        return;
+    }
+
+    if (!db->transformKeyWithSeed(transformSeed)) {
+        raiseError(tr("Unable to calculate master key"));
         return;
     }
 
@@ -89,11 +98,20 @@ void KeePass2Writer::writeDatabase(QIODevice* device, Database* db)
     CHECK_RETURN(writeHeaderField(KeePass2::EndOfHeader, endOfHeader));
 
     header.close();
+
     m_device = device;
+#ifdef WITH_XC_GPG
+    GpgStreamWriter gpgStreamWriter{device, db};
+    if (gpgStreamWriter.hasEncryptionKey())
+    {
+        m_device = gpgStreamWriter.getGpgStream();
+    }
+#endif
+
     QByteArray headerHash = CryptoHash::hash(header.data(), CryptoHash::Sha256);
     CHECK_RETURN(writeData(header.data()));
 
-    SymmetricCipherStream cipherStream(device, SymmetricCipher::cipherToAlgorithm(db->cipher()),
+    SymmetricCipherStream cipherStream(m_device, SymmetricCipher::cipherToAlgorithm(db->cipher()),
                                        SymmetricCipher::Cbc, SymmetricCipher::Encrypt);
     cipherStream.init(finalKey, encryptionIV);
     if (!cipherStream.open(QIODevice::WriteOnly)) {
@@ -146,6 +164,15 @@ void KeePass2Writer::writeDatabase(QIODevice* device, Database* db)
         raiseError(cipherStream.errorString());
         return;
     }
+
+#ifdef WITH_XC_GPG
+    if (gpgStreamWriter.hasEncryptedStream()) {
+        if (!gpgStreamWriter.resetStream()){
+            raiseError(gpgStreamWriter.getLastError());
+            return;
+        }
+    }
+#endif
 
     if (xmlWriter.hasError()) {
         raiseError(xmlWriter.errorString());

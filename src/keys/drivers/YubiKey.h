@@ -1,5 +1,6 @@
 /*
 *  Copyright (C) 2014 Kyle Manna <kyle@kylemanna.com>
+*  Copyright (C) 2017 KeePassXC Team <team@keepassxc.org>
 *
 *  This program is free software: you can redistribute it and/or modify
 *  it under the terms of the GNU General Public License as published by
@@ -85,6 +86,11 @@ signals:
      *           the user to touch it for a response
      */
     void detected(int slot, bool blocking);
+
+    /**
+     * Emitted when detection is complete
+     */
+    void detectComplete();
 
     /**
      * Emitted when the YubiKey was challenged and has returned a response.

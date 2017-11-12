@@ -1,6 +1,7 @@
 /*
  *  Copyright (C) 2012 Tobias Tangemann
  *  Copyright (C) 2012 Felix Geyer <debfx@fobos.de>
+ *  Copyright (C) 2017 KeePassXC Team <team@keepassxc.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,10 +19,14 @@
 
 #include "Application.h"
 #include "MainWindow.h"
+#include "core/Config.h"
 
 #include <QAbstractNativeEventFilter>
 #include <QFileOpenEvent>
 #include <QSocketNotifier>
+#include <QLockFile>
+#include <QStandardPaths>
+#include <QtNetwork/QLocalSocket>
 
 #include "autotype/AutoType.h"
 
@@ -76,6 +81,8 @@ Application::Application(int& argc, char** argv)
 #ifdef Q_OS_UNIX
     , m_unixSignalNotifier(nullptr)
 #endif
+    , m_alreadyRunning(false)
+    , m_lockFile(nullptr)
 {
 #if defined(Q_OS_UNIX) && !defined(Q_OS_OSX)
     installNativeEventFilter(new XcbEventFilter());
@@ -85,6 +92,80 @@ Application::Application(int& argc, char** argv)
 #if defined(Q_OS_UNIX)
     registerUnixSignals();
 #endif
+
+    QString userName = qgetenv("USER");
+    if (userName.isEmpty()) {
+        userName = qgetenv("USERNAME");
+    }
+    QString identifier = "keepassxc";
+    if (!userName.isEmpty()) {
+        identifier += "-" + userName;
+    }
+#ifdef QT_DEBUG
+        // In DEBUG mode don't interfere with Release instances
+        identifier += "-DEBUG";
+#endif
+    QString socketName = identifier + ".socket";
+    QString lockName = identifier + ".lock";
+
+    // According to documentation we should use RuntimeLocation on *nixes, but even Qt doesn't respect
+    // this and creates sockets in TempLocation, so let's be consistent.
+    m_lockFile = new QLockFile(QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/" + lockName);
+    m_lockFile->setStaleLockTime(0);
+    m_lockFile->tryLock();
+
+    switch (m_lockFile->error()) {
+    case QLockFile::NoError:
+        // No existing lock was found, start listener
+        m_lockServer.setSocketOptions(QLocalServer::UserAccessOption);
+        m_lockServer.listen(socketName);
+        connect(&m_lockServer, SIGNAL(newConnection()), this, SIGNAL(anotherInstanceStarted()));
+        break;
+    case QLockFile::LockFailedError: {
+        if (config()->get("SingleInstance").toBool()) {
+            // Attempt to connect to the existing instance
+            QLocalSocket client;
+            for (int i = 0; i < 3; i++) {
+                client.connectToServer(socketName);
+                if (client.waitForConnected(150)) {
+                    // Connection succeeded, this will raise the existing window if minimized
+                    client.abort();
+                    m_alreadyRunning = true;
+                    break;
+                }
+            }
+
+            if (!m_alreadyRunning) {
+                // If we get here then the original instance is likely dead
+                qWarning() << QCoreApplication::translate("Main",
+                                "Existing single-instance lock file is invalid. Launching new instance.")
+                                .toUtf8().constData();
+
+                // forceably reset the lock file
+                m_lockFile->removeStaleLockFile();
+                m_lockFile->tryLock();
+                // start the listen server
+                m_lockServer.setSocketOptions(QLocalServer::UserAccessOption);
+                m_lockServer.listen(socketName);
+                connect(&m_lockServer, SIGNAL(newConnection()), this, SIGNAL(anotherInstanceStarted()));
+            }
+        }
+        break;
+    }
+    default:
+        qWarning() << QCoreApplication::translate("Main",
+                        "The lock file could not be created. Single-instance mode disabled.")
+                        .toUtf8().constData();
+    }
+}
+
+Application::~Application()
+{
+    m_lockServer.close();
+    if (m_lockFile) {
+        m_lockFile->unlock();
+        delete m_lockFile;
+    }
 }
 
 QWidget* Application::mainWindow() const
@@ -171,3 +252,13 @@ void Application::quitBySignal()
         static_cast<MainWindow*>(m_mainWindow)->appExit();
 }
 #endif
+
+bool Application::isAlreadyRunning() const
+{
+#ifdef QT_DEBUG
+    // In DEBUG mode we can run unlimited instances
+    return false;
+#endif
+    return config()->get("SingleInstance").toBool() && m_alreadyRunning;
+}
+

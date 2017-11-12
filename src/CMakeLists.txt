@@ -1,4 +1,5 @@
 #  Copyright (C) 2010 Felix Geyer <debfx@fobos.de>
+#  Copyright (C) 2017 KeePassXC Team <team@keepassxc.org>
 #
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -58,6 +59,10 @@ set(keepassx_SOURCES
     core/Tools.cpp
     core/Translator.cpp
     core/Uuid.cpp
+    core/Base32.h
+    core/Base32.cpp
+    cli/PasswordInput.cpp
+    cli/PasswordInput.h
     crypto/Crypto.cpp
     crypto/CryptoHash.cpp
     crypto/Random.cpp
@@ -135,8 +140,6 @@ set(keepassx_SOURCES
     streams/qtiocompressor.cpp
     streams/StoreDataStream.cpp
     streams/SymmetricCipherStream.cpp
-    totp/base32.h
-    totp/base32.cpp
     totp/totp.h
     totp/totp.cpp
 )
@@ -166,10 +169,17 @@ set(keepassx_SOURCES_MAINEXE
 add_feature_info(AutoType WITH_XC_AUTOTYPE "Automatic password typing")
 add_feature_info(KeePassHTTP WITH_XC_HTTP "Browser integration compatible with ChromeIPass and PassIFox")
 add_feature_info(YubiKey WITH_XC_YUBIKEY "YubiKey HMAC-SHA1 challenge-response")
+add_feature_info(GPG WITH_XC_GPG "Unlock databases with gpg")
 
 add_subdirectory(http)
 if(WITH_XC_HTTP)
     set(keepasshttp_LIB keepasshttp qhttp Qt5::Network)
+endif()
+
+if(WITH_XC_GPG)
+  set(keepassx_SOURCES ${keepassx_SOURCES} streams/gpgstream.cpp streams/gpgstream.h gpg/gpg.cpp gpg/gpg.h  gpg/gpgencryptionkey.cpp gpg/gpgencryptionkey.h gpg/gpgstreamwriter.cpp gpg/gpgstreamwriter.h)
+  set(GPGME_LIBRARIES Gpgmepp QGpgme)
+  
 endif()
 
 add_subdirectory(autotype)
@@ -212,11 +222,13 @@ add_library(keepassx_core STATIC ${keepassx_SOURCES})
 
 set_target_properties(keepassx_core PROPERTIES COMPILE_DEFINITIONS KEEPASSX_BUILDING_CORE)
 target_link_libraries(keepassx_core
+                      ${GPGME_LIBRARIES}
                       ${keepasshttp_LIB}
                       ${autotype_LIB}
                       ${YUBIKEY_LIBRARIES}
                       zxcvbn
                       Qt5::Core
+                      Qt5::Network
                       Qt5::Concurrent
                       Qt5::Widgets
                       ${GCRYPT_LIBRARIES}
@@ -286,7 +298,12 @@ if(APPLE AND WITH_APP_BUNDLE)
 endif()
 
 if(MINGW)
-  string(REPLACE "AMD" "Win" OUTPUT_FILE_POSTFIX "${CMAKE_HOST_SYSTEM_PROCESSOR}")
+  if(${CMAKE_SIZEOF_VOID_P} EQUAL "8")
+    set(OUTPUT_FILE_POSTFIX "Win64")
+  else()
+    set(OUTPUT_FILE_POSTFIX "Win32")
+  endif()
+
   set(CPACK_GENERATOR "ZIP;NSIS")
   set(CPACK_STRIP_FILES ON)
   set(CPACK_PACKAGE_FILE_NAME "${PROGNAME}-${KEEPASSXC_VERSION}-${OUTPUT_FILE_POSTFIX}")
@@ -295,6 +312,7 @@ if(MINGW)
   set(CPACK_PACKAGE_VENDOR "${PROGNAME} Team")
   string(REGEX REPLACE "/" "\\\\\\\\" CPACK_PACKAGE_ICON "${CMAKE_SOURCE_DIR}/share/windows/installer-header.bmp")
   set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE.GPL-2")
+  set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
   set(CPACK_NSIS_MUI_ICON "${CMAKE_SOURCE_DIR}/share/windows/keepassxc.ico")
   set(CPACK_NSIS_MUI_UNIICON "${CPACK_NSIS_MUI_ICON}")
   set(CPACK_NSIS_INSTALLED_ICON_NAME "\\\\${PROGNAME}.exe")
@@ -303,6 +321,7 @@ if(MINGW)
   set(CPACK_NSIS_CREATE_ICONS_EXTRA "CreateShortCut '$SMPROGRAMS\\\\$STARTMENU_FOLDER\\\\${PROGNAME}.lnk' '$INSTDIR\\\\${PROGNAME}.exe'")
   set(CPACK_NSIS_DELETE_ICONS_EXTRA "Delete '$SMPROGRAMS\\\\$START_MENU\\\\${PROGNAME}.lnk'")
   set(CPACK_NSIS_URL_INFO_ABOUT "https://keepassxc.org")
+  set(CPACK_NSIS_DISPLAY_NAME ${PROGNAME})
   set(CPACK_NSIS_PACKAGE_NAME "${PROGNAME} v${KEEPASSXC_VERSION}")
   set(CPACK_NSIS_MUI_FINISHPAGE_RUN "../${PROGNAME}.exe")
   include(CPack)

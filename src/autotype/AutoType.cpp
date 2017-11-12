@@ -1,5 +1,6 @@
 /*
  *  Copyright (C) 2012 Felix Geyer <debfx@fobos.de>
+ *  Copyright (C) 2017 KeePassXC Team <team@keepassxc.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -316,7 +317,7 @@ bool AutoType::parseActions(const QString& sequence, const Entry* entry, QList<A
 {
     QString tmpl;
     bool inTmpl = false;
-    m_autoTypeDelay = 0;
+    m_autoTypeDelay = config()->get("AutoTypeDelay").toInt();
 
 
     for (const QChar& ch : sequence) {

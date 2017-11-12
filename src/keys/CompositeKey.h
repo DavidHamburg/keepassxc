@@ -1,5 +1,6 @@
 /*
 *  Copyright (C) 2010 Felix Geyer <debfx@fobos.de>
+*  Copyright (C) 2017 KeePassXC Team <team@keepassxc.org>
 *
 *  This program is free software: you can redistribute it and/or modify
 *  it under the terms of the GNU General Public License as published by
@@ -43,7 +44,9 @@ public:
 
     void addKey(const Key& key);
     void addChallengeResponseKey(QSharedPointer<ChallengeResponseKey> key);
+    void setGpgEncryptionKey(QString encryptionKeyId);
 
+    QString gpgEncryptionKeyId() const;
     static int transformKeyBenchmark(int msec);
     static CompositeKey readFromLine(QString line);
 
@@ -53,6 +56,7 @@ private:
 
     QList<Key*> m_keys;
     QList<QSharedPointer<ChallengeResponseKey>> m_challengeResponseKeys;
+    QString m_gpgEncryptionKeyId;
 };
 
 #endif // KEEPASSX_COMPOSITEKEY_H
